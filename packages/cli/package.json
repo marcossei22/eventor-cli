@@ -1,13 +1,30 @@
 {
   "name": "@eventor/cli",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Binário `eventor` (commander). Placeholder — implementado na sub-fase 9.C.",
+  "version": "0.1.0",
+  "description": "Binário `eventor` — cliente headless da Management API do Eventor, desenhado pra agentes de IA (commander).",
   "type": "module",
   "bin": {
     "eventor": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
   "dependencies": {
-    "@eventor/sdk": "workspace:*"
+    "@eventor/sdk": "workspace:*",
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
