@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+      - run: pnpm -r build
+
+      # O SDK gera os tipos a partir de openapi/eventor-v1.json. Falha o CI se o
+      # tipo gerado estiver desatualizado em relação ao spec commitado.
+      - name: openapi types em dia
+        run: |
+          pnpm gen
+          git diff --exit-code packages/sdk/src/generated/types.ts \
+            || (echo "::error::types.ts desatualizado — rode 'pnpm gen' e commite." && exit 1)

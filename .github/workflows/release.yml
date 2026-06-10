@@ -1,0 +1,41 @@
+name: Release
+
+# Publica @eventor/sdk e @eventor/cli no npm ao empurrar uma tag vX.Y.Z.
+# Pré-requisitos (uma vez): criar a org `eventor` no npmjs.com e adicionar o
+# secret NPM_TOKEN (automation token, escopo só-publish) no repositório.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+  id-token: write # provenance no npm
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      # Porta de qualidade antes de publicar.
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+      - run: pnpm -r build
+
+      # pnpm publica em ordem topológica (sdk antes do cli) e converte
+      # workspace:* na versão real. --access public exigido por pacote scoped.
+      - name: publish
+        run: pnpm -r publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -74,6 +74,22 @@ eventor api GET /events --all                    # escape hatch: cobre 100% do s
 - **Destrutivo (`api DELETE`)** exige `--yes` (agente em CI nunca fica pendurado).
 - **`eventor skill install`** instala o [`SKILL.md`](packages/cli/SKILL.md) em `~/.claude/skills/eventor/` — ensina o agente quando/como usar o CLI. `--help` em qualquer comando traz exemplos copiáveis + a tabela de exit codes.
 
+## Publicando no npm (`@eventor/cli` + `@eventor/sdk`)
+
+A publicação é automática ao empurrar uma tag `vX.Y.Z` (workflow [`release.yml`](.github/workflows/release.yml)). Pré-requisitos, **uma vez**:
+
+1. Criar a org **`eventor`** no [npmjs.com](https://www.npmjs.com/org/create) (grátis para pacotes públicos).
+2. Gerar um **automation token** (Account → Access Tokens → Granular/Automation, **só publish**) e salvá-lo como secret **`NPM_TOKEN`** do repositório (Settings → Secrets → Actions). É revogável — não é a credencial pessoal.
+
+Depois, a cada release:
+
+```bash
+# bump das versões em packages/sdk e packages/cli, commit, então:
+git tag v0.1.0 && git push origin v0.1.0   # dispara o workflow → publica sdk depois cli
+```
+
+O `pnpm -r publish` publica em ordem (sdk antes do cli) e converte `workspace:*` na versão real. O binário instalado chama-se `eventor` independentemente do nome do pacote (`npx @eventor/cli ...` para uso pontual).
+
 ## Decisões (PRD `cli-eventor-headless` §13–14)
 
 - Repo separado do backend Laravel; **CLI antes do MCP**; **commander**; OpenAPI como fonte de verdade.
