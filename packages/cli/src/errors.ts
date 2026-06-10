@@ -1,4 +1,4 @@
-import { EventorApiError, EventorError, EventorNetworkError, ExitCode } from '@eventor/sdk';
+import { EventorApiError, EventorError, EventorNetworkError, ExitCode } from '@eventor-run/sdk';
 
 import type { Io } from './io.js';
 

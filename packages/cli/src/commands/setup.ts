@@ -1,4 +1,4 @@
-import { EventorApiError, type EventorClient } from '@eventor/sdk';
+import { EventorApiError, type EventorClient } from '@eventor-run/sdk';
 import { readFileSync } from 'node:fs';
 import type { Command } from 'commander';
 

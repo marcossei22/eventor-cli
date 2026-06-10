@@ -20,9 +20,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Build primeiro: o @eventor/cli resolve os tipos do @eventor/sdk a partir
+      # Build primeiro: o @eventor-run/cli resolve os tipos do @eventor-run/sdk a partir
       # do dist/ dele (topológico: sdk antes do cli). Sem isso, typecheck/test
-      # falham com "Cannot find module '@eventor/sdk'".
+      # falham com "Cannot find module '@eventor-run/sdk'".
       - run: pnpm -r build
       - run: pnpm -r typecheck
       - run: pnpm -r test

@@ -5,7 +5,7 @@ import {
   looksLikeApiKey,
   readConfigFile,
   writeConfigFile,
-} from '@eventor/sdk';
+} from '@eventor-run/sdk';
 import { rmSync } from 'node:fs';
 import type { Command } from 'commander';
 

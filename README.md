@@ -4,9 +4,9 @@ Cliente **headless** da [Management API do Eventor](https://eventor.run) (`/api/
 
 | Pacote | O que é | Status |
 |---|---|---|
-| [`@eventor/sdk`](packages/sdk) | Cliente HTTP tipado (auth, retry, paginação, upload). Núcleo. | ✅ **9.B** |
-| [`@eventor/cli`](packages/cli) | Binário `eventor` (commander). | ✅ **9.C** |
-| `@eventor/mcp` | Servidor MCP com tools auto-geradas do spec. | ⏳ 9.E |
+| [`@eventor-run/sdk`](packages/sdk) | Cliente HTTP tipado (auth, retry, paginação, upload). Núcleo. | ✅ **9.B** |
+| [`@eventor-run/cli`](packages/cli) | Binário `eventor` (commander). | ✅ **9.C** |
+| `@eventor-run/mcp` | Servidor MCP com tools auto-geradas do spec. | ⏳ 9.E |
 
 A **fonte de verdade** é o OpenAPI 3.1 em [`openapi/eventor-v1.json`](openapi/eventor-v1.json) (gerado pelo backend Laravel). Os tipos do SDK são gerados dele — endpoint novo na API = tipo novo no cliente, sem código escrito à mão.
 
@@ -28,7 +28,7 @@ pnpm typecheck
 ## SDK em 30 segundos
 
 ```ts
-import { EventorClient, createClient } from '@eventor/sdk';
+import { EventorClient, createClient } from '@eventor-run/sdk';
 
 // credencial em camadas: flag → EVENTOR_API_KEY → ~/.config/eventor/config.json
 const sdk = createClient({ apiKey: process.env.EVENTOR_API_KEY });
@@ -74,7 +74,7 @@ eventor api GET /events --all                    # escape hatch: cobre 100% do s
 - **Destrutivo (`api DELETE`)** exige `--yes` (agente em CI nunca fica pendurado).
 - **`eventor skill install`** instala o [`SKILL.md`](packages/cli/SKILL.md) em `~/.claude/skills/eventor/` — ensina o agente quando/como usar o CLI. `--help` em qualquer comando traz exemplos copiáveis + a tabela de exit codes.
 
-## Publicando no npm (`@eventor/cli` + `@eventor/sdk`)
+## Publicando no npm (`@eventor-run/cli` + `@eventor-run/sdk`)
 
 A publicação é automática ao empurrar uma tag `vX.Y.Z` (workflow [`release.yml`](.github/workflows/release.yml)). Pré-requisitos, **uma vez**:
 
@@ -88,10 +88,10 @@ Depois, a cada release:
 git tag v0.1.0 && git push origin v0.1.0   # dispara o workflow → publica sdk depois cli
 ```
 
-O `pnpm -r publish` publica em ordem (sdk antes do cli) e converte `workspace:*` na versão real. O binário instalado chama-se `eventor` independentemente do nome do pacote (`npx @eventor/cli ...` para uso pontual).
+O `pnpm -r publish` publica em ordem (sdk antes do cli) e converte `workspace:*` na versão real. O binário instalado chama-se `eventor` independentemente do nome do pacote (`npx @eventor-run/cli ...` para uso pontual).
 
 ## Decisões (PRD `cli-eventor-headless` §13–14)
 
 - Repo separado do backend Laravel; **CLI antes do MCP**; **commander**; OpenAPI como fonte de verdade.
 - Base URL default: `https://eventor.run/api/v1` (sobrescrevível por `--base-url` / `EVENTOR_BASE_URL`).
-- Distribuição npm (`@eventor/cli`): decisão da **9.D**.
+- Distribuição npm (`@eventor-run/cli`): decisão da **9.D**.

@@ -1,5 +1,5 @@
 /**
- * @eventor/sdk — cliente HTTP tipado da Management API do Eventor.
+ * @eventor-run/sdk — cliente HTTP tipado da Management API do Eventor.
  *
  * Núcleo único consumido pelo CLI (9.C) e pelo MCP (9.E). Tipos gerados do
  * OpenAPI; auth em camadas; retry/backoff; paginação; upload por caminho.

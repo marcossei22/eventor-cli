@@ -1,4 +1,4 @@
-import type { EventorClient } from '@eventor/sdk';
+import type { EventorClient } from '@eventor-run/sdk';
 
 /**
  * Percorre todas as páginas de um endpoint de coleção via o escape hatch `api()`

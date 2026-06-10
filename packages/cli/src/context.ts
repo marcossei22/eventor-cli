@@ -1,4 +1,4 @@
-import { createClient, type EventorClient, type EventorClientOptions } from '@eventor/sdk';
+import { createClient, type EventorClient, type EventorClientOptions } from '@eventor-run/sdk';
 
 import { NoTtyError } from './errors.js';
 import { Io } from './io.js';

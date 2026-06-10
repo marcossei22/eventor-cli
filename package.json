@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@10.30.2",
   "scripts": {
-    "gen": "pnpm --filter @eventor/sdk gen",
+    "gen": "pnpm --filter @eventor-run/sdk gen",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck"

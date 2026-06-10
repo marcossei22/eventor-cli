@@ -1,6 +1,6 @@
 name: Release
 
-# Publica @eventor/sdk e @eventor/cli no npm ao empurrar uma tag vX.Y.Z.
+# Publica @eventor-run/sdk e @eventor-run/cli no npm ao empurrar uma tag vX.Y.Z.
 # Pré-requisitos (uma vez): criar a org `eventor` no npmjs.com e adicionar o
 # secret NPM_TOKEN (automation token, escopo só-publish) no repositório.
 on:

@@ -14,7 +14,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@eventor/sdk':
+      '@eventor-run/sdk':
         specifier: workspace:*
         version: link:../sdk
       commander:
@@ -36,7 +36,7 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@eventor/sdk':
+      '@eventor-run/sdk':
         specifier: workspace:*
         version: link:../sdk
 

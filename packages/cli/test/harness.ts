@@ -1,4 +1,4 @@
-import { EventorClient } from '@eventor/sdk';
+import { EventorClient } from '@eventor-run/sdk';
 import { Writable } from 'node:stream';
 
 import type { ClientFactory } from '../src/context.js';

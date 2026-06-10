@@ -1,5 +1,5 @@
 {
-  "name": "@eventor/sdk",
+  "name": "@eventor-run/sdk",
   "version": "0.1.0",
   "description": "Cliente HTTP tipado da Management API do Eventor (auth em camadas, retry, paginação, upload). Núcleo consumido pelo CLI e pelo MCP.",
   "license": "MIT",
