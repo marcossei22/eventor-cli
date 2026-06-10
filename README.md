@@ -1,0 +1,62 @@
+# eventor-cli
+
+Cliente **headless** da [Management API do Eventor](https://eventor.run) (`/api/v1`), desenhado com um **agente de IA como usuário primário**. Monorepo com três pacotes sobre um SDK tipado único:
+
+| Pacote | O que é | Status |
+|---|---|---|
+| [`@eventor/sdk`](packages/sdk) | Cliente HTTP tipado (auth, retry, paginação, upload). Núcleo. | ✅ **9.B** |
+| `@eventor/cli` | Binário `eventor` (commander). | ⏳ 9.C |
+| `@eventor/mcp` | Servidor MCP com tools auto-geradas do spec. | ⏳ 9.E |
+
+A **fonte de verdade** é o OpenAPI 3.1 em [`openapi/eventor-v1.json`](openapi/eventor-v1.json) (gerado pelo backend Laravel). Os tipos do SDK são gerados dele — endpoint novo na API = tipo novo no cliente, sem código escrito à mão.
+
+## Requisitos
+
+- Node ≥ 20 (usa `fetch`/`FormData` nativos — **zero dependência de runtime**)
+- pnpm 10
+
+## Setup
+
+```bash
+pnpm install
+pnpm gen        # regenera os tipos a partir de openapi/eventor-v1.json
+pnpm build      # compila os pacotes
+pnpm test       # roda os testes
+pnpm typecheck
+```
+
+## SDK em 30 segundos
+
+```ts
+import { EventorClient, createClient } from '@eventor/sdk';
+
+// credencial em camadas: flag → EVENTOR_API_KEY → ~/.config/eventor/config.json
+const sdk = createClient({ apiKey: process.env.EVENTOR_API_KEY });
+
+// request tipado (path/query/body inferidos do OpenAPI):
+const event = await sdk.request('get', '/events/{event}', { path: { event: 'MAR2026' } });
+
+// paginação automática:
+const all = await sdk.all('/events', { query: { status: 'published' } });
+
+// upload por caminho local (sem montar multipart na mão):
+await sdk.upload('post', '/events/{event}/logo', { path: { event: 'MAR2026' }, file: './logo.png' });
+
+// escape hatch sem tipos (cobre 100% do spec):
+await sdk.api('POST', '/events', { body: { name: 'Maratona' } });
+```
+
+### O que o SDK entrega (9.B)
+
+- **Tipos gerados** do OpenAPI (`request`/`all`/`paginate`/`upload` totalmente tipados).
+- **Credencial em camadas** (flag → env → config file `0600` → erro `exit 4`).
+- **Retry/backoff** exponencial em `429`/`5xx`, respeitando `Retry-After`. `POST`/`PATCH` **não** re-tentam em `5xx` (evita duplicar escrita); `429` re-tenta sempre.
+- **Paginação** via `meta.last_page` (`all()` / `paginate()`).
+- **Upload** por caminho de arquivo (lê do disco, monta multipart).
+- **Erros** preservam o envelope `{error,message,details}` + `hint` acionável e expõem **exit code semântico** (`EventorApiError.exitCode`) pro CLI.
+
+## Decisões (PRD `cli-eventor-headless` §13–14)
+
+- Repo separado do backend Laravel; **CLI antes do MCP**; **commander**; OpenAPI como fonte de verdade.
+- Base URL default: `https://eventor.run/api/v1` (sobrescrevível por `--base-url` / `EVENTOR_BASE_URL`).
+- Distribuição npm (`@eventor/cli`): decisão da **9.D**.

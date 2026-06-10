@@ -1,0 +1,34 @@
+{
+  "name": "@eventor/sdk",
+  "version": "0.1.0",
+  "description": "Cliente HTTP tipado da Management API do Eventor (auth em camadas, retry, paginação, upload). Núcleo consumido pelo CLI e pelo MCP.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "gen": "openapi-typescript ../../openapi/eventor-v1.json --output ./src/generated/types.ts",
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "openapi-typescript": "^7.5.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

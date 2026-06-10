@@ -1,0 +1,23 @@
+{
+  "name": "eventor-cli-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SDK + CLI + MCP para a Management API do Eventor (cliente headless pra agentes de IA).",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@10.30.2",
+  "scripts": {
+    "gen": "pnpm --filter @eventor/sdk gen",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

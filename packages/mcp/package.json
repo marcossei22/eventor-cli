@@ -1,0 +1,10 @@
+{
+  "name": "@eventor/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Servidor MCP com tools auto-geradas do OpenAPI. Placeholder — implementado na sub-fase 9.E.",
+  "type": "module",
+  "dependencies": {
+    "@eventor/sdk": "workspace:*"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@eventor/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Binário `eventor` (commander). Placeholder — implementado na sub-fase 9.C.",
+  "type": "module",
+  "bin": {
+    "eventor": "./dist/index.js"
+  },
+  "dependencies": {
+    "@eventor/sdk": "workspace:*"
+  }
+}
