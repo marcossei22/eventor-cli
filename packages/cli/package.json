@@ -7,7 +7,8 @@
     "eventor": "./dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "SKILL.md"
   ],
   "engines": {
     "node": ">=20"

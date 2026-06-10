@@ -18,8 +18,17 @@ export function registerApi(program: Command, deps: CliDeps): void {
     .description('Chama qualquer endpoint cru: eventor api GET /events --query status=published')
     .argument('<method>', 'GET|POST|PUT|PATCH|DELETE')
     .argument('<path>', 'caminho do endpoint (ex.: /events ou /events/MAR2026/batches)')
-    .option('--body <body>', "JSON inline, @arquivo.json ou - (stdin)")
+    .option('--body <body>', 'JSON inline, @arquivo.json ou - (stdin)')
     .option('--query <pair...>', 'parâmetro de query chave=valor (repetível)')
+    .addHelpText(
+      'after',
+      `
+Exemplos:
+  $ eventor api GET /events --all | jq '.data[].code'
+  $ eventor api POST /events --body @evento.json
+  $ echo '{"code":"PROMO10","type":"percent","value":10}' | eventor api POST /events/MAR2026/coupons --body -
+  $ eventor api DELETE /events/MAR2026/batches/5 --yes`,
+    )
     .action(async (method: string, path: string, _opts, command: Command) => {
       const flags = command.optsWithGlobals() as GlobalFlags & { body?: string; query?: string[] };
       const ctx = new CliContext(flags, deps);
