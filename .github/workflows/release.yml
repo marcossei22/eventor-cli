@@ -28,10 +28,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Porta de qualidade antes de publicar.
+      # Porta de qualidade antes de publicar (build primeiro: cli resolve os
+      # tipos do sdk a partir do dist/).
+      - run: pnpm -r build
       - run: pnpm -r typecheck
       - run: pnpm -r test
-      - run: pnpm -r build
 
       # pnpm publica em ordem topológica (sdk antes do cli) e converte
       # workspace:* na versão real. --access public exigido por pacote scoped.

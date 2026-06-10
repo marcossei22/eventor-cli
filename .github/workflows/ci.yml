@@ -20,9 +20,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Build primeiro: o @eventor/cli resolve os tipos do @eventor/sdk a partir
+      # do dist/ dele (topológico: sdk antes do cli). Sem isso, typecheck/test
+      # falham com "Cannot find module '@eventor/sdk'".
+      - run: pnpm -r build
       - run: pnpm -r typecheck
       - run: pnpm -r test
-      - run: pnpm -r build
 
       # O SDK gera os tipos a partir de openapi/eventor-v1.json. Falha o CI se o
       # tipo gerado estiver desatualizado em relação ao spec commitado.
