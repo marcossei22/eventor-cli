@@ -5,7 +5,7 @@ Cliente **headless** da [Management API do Eventor](https://eventor.run) (`/api/
 | Pacote | O que é | Status |
 |---|---|---|
 | [`@eventor/sdk`](packages/sdk) | Cliente HTTP tipado (auth, retry, paginação, upload). Núcleo. | ✅ **9.B** |
-| `@eventor/cli` | Binário `eventor` (commander). | ⏳ 9.C |
+| [`@eventor/cli`](packages/cli) | Binário `eventor` (commander). | ✅ **9.C** |
 | `@eventor/mcp` | Servidor MCP com tools auto-geradas do spec. | ⏳ 9.E |
 
 A **fonte de verdade** é o OpenAPI 3.1 em [`openapi/eventor-v1.json`](openapi/eventor-v1.json) (gerado pelo backend Laravel). Os tipos do SDK são gerados dele — endpoint novo na API = tipo novo no cliente, sem código escrito à mão.
@@ -54,6 +54,24 @@ await sdk.api('POST', '/events', { body: { name: 'Maratona' } });
 - **Paginação** via `meta.last_page` (`all()` / `paginate()`).
 - **Upload** por caminho de arquivo (lê do disco, monta multipart).
 - **Erros** preservam o envelope `{error,message,details}` + `hint` acionável e expõem **exit code semântico** (`EventorApiError.exitCode`) pro CLI.
+
+## CLI (`eventor`) — 9.C
+
+Desenhado com **stdout = dados, stderr = humanos**. Sem TTY (pipe/agente) o stdout é JSON puro.
+
+```bash
+eventor auth login --api-key sk_live_...        # valida em /me e grava ~/.config/eventor/config.json (0600)
+eventor event list --json | jq '.data[].code'   # dados no stdout
+eventor event setup --from spec.json --dry-run  # mostra o plano (would_create/would_update/unchanged)
+eventor event setup --from spec.json            # executa idempotente (organizer→event→races→batches→…)
+eventor event publish --event MAR2026
+eventor api GET /events --all                    # escape hatch: cobre 100% do spec, --all pagina tudo
+```
+
+- **Exit codes semânticos:** `0` ok · `1` genérico/5xx · `2` uso · `3` not_found · `4` unauthorized · `5` conflict.
+- **Erro acionável:** todo erro vira `{"error":{"code","message","hint"}}` no stderr; o agente lê `code` (decide) e `hint` (próximo comando).
+- **`event setup`:** workflow consolidado e idempotente; `race_prices` aceita o **nome da prova** (resolvido pra `race_id`); `--dry-run` só faz GETs.
+- **Destrutivo (`api DELETE`)** exige `--yes` (agente em CI nunca fica pendurado).
 
 ## Decisões (PRD `cli-eventor-headless` §13–14)
 
