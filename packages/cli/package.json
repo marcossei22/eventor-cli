@@ -1,6 +1,6 @@
 {
   "name": "@eventor-run/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Binário `eventor` — cliente headless da Management API do Eventor, desenhado pra agentes de IA (commander).",
   "license": "MIT",
   "keywords": ["eventor", "cli", "headless", "ai-agent", "openapi"],

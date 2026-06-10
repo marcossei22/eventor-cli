@@ -34,6 +34,10 @@ function fakeServer(): Handler {
           ? { status: 200, body: { data: { code: 'MAR2026', status: 'published' } } }
           : { status: 404, body: { error: 'not_found', message: 'x' } };
       }
+      // Realista: subrecursos de um evento inexistente dão 404 (resolveEvent falha).
+      if (path.startsWith('/events/MAR2026/') && !eventCreated) {
+        return { status: 404, body: { error: 'not_found', message: 'x' } };
+      }
       return { status: 200, body: { data: [], meta: { last_page: 1 } } };
     }
     if (method === 'POST' && path === '/events') {
@@ -61,7 +65,15 @@ describe('event setup --dry-run', () => {
     expect(out.data.event).toBeNull();
     expect(out.data.plan.length).toBeGreaterThan(0);
     expect(out.data.plan.every((p: { action: string }) => p.action.startsWith('would') || p.action === 'unchanged')).toBe(true);
-    expect(out.data.plan.find((p: { resource: string }) => p.resource === 'event').action).toBe('would_create');
+
+    // Regressão: pra um evento NOVO, o dry-run não pode quebrar tentando listar
+    // subrecursos de um evento que ainda não existe (dava 404 → abortava). Os
+    // filhos têm que entrar como would_create.
+    const byResource = (res: string) => out.data.plan.find((p: { resource: string }) => p.resource === res);
+    expect(byResource('event').action).toBe('would_create');
+    expect(byResource('race').action).toBe('would_create');
+    expect(byResource('batch').action).toBe('would_create');
+    expect(byResource('registration_field').action).toBe('would_create');
   });
 });
 

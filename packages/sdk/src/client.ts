@@ -354,7 +354,7 @@ type PageItem<P extends PathsWithMethod<'get'>> = SuccessData<Operation<P, 'get'
 // utilitários puros
 // ---------------------------------------------------------------------------
 
-export const SDK_VERSION = '0.1.0';
+export const SDK_VERSION = '0.1.1';
 
 /** Remove chaves `undefined` recursivamente (a API valida; não mandar lixo). */
 export function stripUndefined<T>(value: T): T {
