@@ -81,6 +81,10 @@ function loadSpec(from: string): EventSpec {
 class SetupRunner {
   private readonly plan: PlanEntry[] = [];
 
+  /** O evento já existe no hub? Enquanto não existe (ex.: dry-run de evento novo),
+   *  não dá pra listar subrecursos dele — GET /events/{code}/races daria 404. */
+  private eventExists = false;
+
   constructor(
     private readonly client: EventorClient,
     private readonly apply: boolean,
@@ -158,6 +162,7 @@ class SetupRunner {
     this.record('event', String(event.code ?? event.name), action);
 
     if (existing) {
+      this.eventExists = true;
       const eventKey = String((existing as Envelope).data?.code ?? key);
       if (this.apply && action !== 'unchanged') {
         await this.write('PATCH', '/events/{event}', { event: eventKey }, body);
@@ -168,13 +173,14 @@ class SetupRunner {
     if (!this.apply) return String(event.code ?? event.name);
 
     const created = await this.write('POST', '/events', undefined, body);
+    this.eventExists = true; // criado agora → subrecursos já podem ser listados
     return String((created as Envelope).data?.code ?? (created as Envelope).data?.id);
   }
 
   // -------------------------------------------------------------------- race
 
   private async ensureRace(eventKey: string, race: Record<string, unknown>): Promise<number | string | undefined> {
-    const existing = (await this.list('/events/{event}/races', { event: eventKey })).find(
+    const existing = (await this.existingEventChildren('/events/{event}/races', { event: eventKey })).find(
       (r) => str(r.name) === str(race.name),
     );
 
@@ -196,7 +202,7 @@ class SetupRunner {
 
   private async ensureCategory(eventKey: string, raceId: number | string, category: Record<string, unknown>): Promise<void> {
     const existing = (
-      await this.list('/events/{event}/races/{race}/categories', { event: eventKey, race: raceId })
+      await this.existingEventChildren('/events/{event}/races/{race}/categories', { event: eventKey, race: raceId })
     ).find((c) => str(c.name) === str(category.name));
 
     const action = this.decide(existing, category);
@@ -239,7 +245,7 @@ class SetupRunner {
       body.race_prices = this.mapRacePrices(batch.race_prices, raceIdByName);
     }
 
-    const existing = (await this.list('/events/{event}/batches', { event: eventKey })).find(
+    const existing = (await this.existingEventChildren('/events/{event}/batches', { event: eventKey })).find(
       (b) => str(b.name) === str(batch.name),
     );
 
@@ -279,7 +285,7 @@ class SetupRunner {
   // ----------------------------------------------------------- registration fields
 
   private async ensureField(eventKey: string, field: Record<string, unknown> & { label: string }): Promise<void> {
-    const existing = (await this.list('/events/{event}/registration-fields', { event: eventKey })).find(
+    const existing = (await this.existingEventChildren('/events/{event}/registration-fields', { event: eventKey })).find(
       (f) => str(f.label) === str(field.label),
     );
 
@@ -311,6 +317,19 @@ class SetupRunner {
   private async list(path: string, pathParams?: Record<string, string | number>): Promise<Array<Record<string, unknown>>> {
     const payload = (await this.client.api('GET', interpolate(path, pathParams), { query: { per_page: 200 } })) as Envelope;
     return Array.isArray(payload.data) ? (payload.data as Array<Record<string, unknown>>) : [];
+  }
+
+  /**
+   * Lista subrecursos de um evento, mas só se o evento já existe. Quando ele
+   * ainda não existe (dry-run de evento novo), o GET /events/{code}/... daria
+   * 404 — então retorna [] e tudo cai naturalmente em "would_create".
+   */
+  private async existingEventChildren(
+    path: string,
+    pathParams: Record<string, string | number>,
+  ): Promise<Array<Record<string, unknown>>> {
+    if (!this.eventExists) return [];
+    return this.list(path, pathParams);
   }
 
   private async safeShow(key: string): Promise<unknown | undefined> {
