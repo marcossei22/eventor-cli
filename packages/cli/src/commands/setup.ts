@@ -30,6 +30,18 @@ export function registerSetup(parent: Command, deps: CliDeps): void {
     .command('setup')
     .description('Configura um evento inteiro a partir de um spec.json (idempotente). Use --dry-run pra ver o plano.')
     .requiredOption('--from <file>', 'arquivo spec.json (ou - pra stdin)')
+    .addHelpText(
+      'after',
+      `
+spec.json descreve event + organizer + races(+categorias) + registration_settings
++ batches + registration_fields + publish. Em batches, race_prices usa o NOME da
+prova (ex.: {"10K": 12900}, em centavos) — o CLI resolve pra race_id.
+
+Exemplos:
+  $ eventor event setup --from spec.json --dry-run   # plano, sem escrever
+  $ eventor event setup --from spec.json             # aplica (re-rodar é seguro)
+  $ cat spec.json | eventor event setup --from -`,
+    )
     .action(async (_opts, command: Command) => {
       const flags = command.optsWithGlobals() as GlobalFlags & { from: string };
       const ctx = new CliContext(flags, deps);

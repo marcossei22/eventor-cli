@@ -5,6 +5,7 @@ import { registerAuth } from './commands/auth.js';
 import { registerDiscovery } from './commands/discovery.js';
 import { registerEvent } from './commands/event.js';
 import { registerSetup } from './commands/setup.js';
+import { registerSkill } from './commands/skill.js';
 import { CLI_VERSION, type CliDeps } from './context.js';
 import { CliUsageError, reportError } from './errors.js';
 import { addGlobalFlags, finalizeProgram } from './flags.js';
@@ -33,10 +34,28 @@ export function buildProgram(deps: CliDeps): Command {
   const eventCmd = registerEvent(program, deps);
   registerDiscovery(program, deps);
   registerSetup(eventCmd, deps); // `eventor event setup`
+  registerSkill(program, deps);
+
+  program.addHelpText('after', HELP_EPILOG);
 
   finalizeProgram(program);
   return program;
 }
+
+const HELP_EPILOG = `
+Exemplos:
+  $ eventor auth login --api-key sk_live_...            # grava credencial (0600)
+  $ eventor event setup --from spec.json --dry-run      # plano sem escrever
+  $ eventor event setup --from spec.json                # configura tudo (idempotente)
+  $ eventor event publish --event MAR2026
+  $ eventor event list --json | jq '.data[].code'       # dados no stdout
+  $ eventor api GET /events --all | jq '.data | length' # escape hatch + paginação
+
+Exit codes:
+  0 ok    1 erro/5xx    2 uso    3 not_found    4 unauthorized    5 conflict
+
+Saída: stdout = dados (JSON em pipe/--json), stderr = humano/erros.
+Credencial: --api-key > EVENTOR_API_KEY > ~/.config/eventor/config.json.`;
 
 /**
  * Roda o CLI e devolve o exit code (sem chamar process.exit — testável).
