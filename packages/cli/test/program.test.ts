@@ -90,4 +90,56 @@ describe('mapeamento de comandos', () => {
     expect(r.code).toBe(0);
     expect(r.calls[0]!.url).toBe('https://api.test/api/v1/modalities');
   });
+
+  it('registration list → GET /events/{event}/registrations com filtros', async () => {
+    const r = await runCli(
+      ['registration', 'list', '--event', 'MAR2026', '--race', '7', '--status', 'confirmed'],
+      [{ status: 200, body: { data: [], meta: {}, links: {} } }],
+    );
+    expect(r.code).toBe(0);
+    expect(r.calls[0]!.url).toBe('https://api.test/api/v1/events/MAR2026/registrations?race_id=7&status=confirmed');
+  });
+
+  it('registration delete sem --yes → exit 2 e nenhuma chamada', async () => {
+    const r = await runCli(['registration', 'delete', '42', '--event', 'MAR2026'], [{ status: 204 }]);
+    expect(r.code).toBe(2);
+    expect(JSON.parse(r.stderr).error.code).toBe('no_tty');
+    expect(r.calls).toHaveLength(0);
+  });
+
+  it('registration delete --yes → DELETE /events/{event}/registrations/{id}', async () => {
+    const r = await runCli(['registration', 'delete', '42', '--event', 'MAR2026', '--yes'], [{ status: 204 }]);
+    expect(r.code).toBe(0);
+    expect(r.calls[0]).toMatchObject({ method: 'DELETE', url: 'https://api.test/api/v1/events/MAR2026/registrations/42' });
+  });
+
+  it('registration delete de inscrição do checkout → 409 → exit 5', async () => {
+    const r = await runCli(
+      ['registration', 'delete', '42', '--event', 'MAR2026', '--yes'],
+      [{ status: 409, body: { error: 'registration_from_checkout', message: 'veio do checkout' } }],
+    );
+    expect(r.code).toBe(5);
+  });
+
+  it('result delete --yes → DELETE /events/{event}/results/{id}', async () => {
+    const r = await runCli(['result', 'delete', '99', '--event', 'MAR2026', '--yes'], [{ status: 204 }]);
+    expect(r.code).toBe(0);
+    expect(r.calls[0]).toMatchObject({ method: 'DELETE', url: 'https://api.test/api/v1/events/MAR2026/results/99' });
+  });
+
+  it('result clear --yes → DELETE /events/{event}/races/{race}/results', async () => {
+    const r = await runCli(
+      ['result', 'clear', '--event', 'MAR2026', '--race', '7', '--yes'],
+      [{ status: 200, body: { data: { deleted: 312 } } }],
+    );
+    expect(r.code).toBe(0);
+    expect(r.calls[0]).toMatchObject({ method: 'DELETE', url: 'https://api.test/api/v1/events/MAR2026/races/7/results' });
+    expect(JSON.parse(r.stdout).data.deleted).toBe(312);
+  });
+
+  it('result clear sem --yes → exit 2 e nenhuma chamada', async () => {
+    const r = await runCli(['result', 'clear', '--event', 'MAR2026', '--race', '7'], [{ status: 200 }]);
+    expect(r.code).toBe(2);
+    expect(r.calls).toHaveLength(0);
+  });
 });
