@@ -1,13 +1,27 @@
 {
   "name": "@eventor-run/cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Binário `eventor` — cliente headless da Management API do Eventor, desenhado pra agentes de IA (commander).",
   "license": "MIT",
-  "keywords": ["eventor", "cli", "headless", "ai-agent", "openapi"],
+  "keywords": [
+    "eventor",
+    "cli",
+    "headless",
+    "ai-agent",
+    "openapi"
+  ],
   "homepage": "https://github.com/marcossei22/eventor-cli#readme",
-  "repository": { "type": "git", "url": "git+https://github.com/marcossei22/eventor-cli.git", "directory": "packages/cli" },
-  "bugs": { "url": "https://github.com/marcossei22/eventor-cli/issues" },
-  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcossei22/eventor-cli.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/marcossei22/eventor-cli/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "eventor": "./dist/index.js"
