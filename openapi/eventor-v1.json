@@ -4145,7 +4145,8 @@
                                                             "type": "string"
                                                         },
                                                         "slug": {
-                                                            "type": "string"
+                                                            "type": "string",
+                                                            "description": "`slug` no contrato da API = coluna `subdomain` do hub (ex.: 'cronoserv').\nN\u00e3o existe coluna `slug`; o identificador est\u00e1vel \u00e9 o subdomain."
                                                         }
                                                     },
                                                     "required": [
@@ -8432,6 +8433,9 @@
                             "null"
                         ]
                     },
+                    "sem_classificacao": {
+                        "type": "boolean"
+                    },
                     "status": {
                         "type": "string"
                     },
@@ -8472,6 +8476,7 @@
                     "lap_count",
                     "lap_distance",
                     "registration_limit",
+                    "sem_classificacao",
                     "status",
                     "created_at",
                     "updated_at"
@@ -9828,6 +9833,13 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/CommonStatus"
+                    },
+                    "sem_classificacao": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "description": "Prova sem cronometragem (ex.: KIDS) \u2014 portal exibe lista de inscritos."
                     }
                 },
                 "required": [
@@ -10603,6 +10615,10 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/CommonStatus"
+                    },
+                    "sem_classificacao": {
+                        "type": "boolean",
+                        "description": "Prova sem cronometragem (ex.: KIDS) \u2014 portal exibe lista de inscritos."
                     }
                 },
                 "title": "UpdateRaceRequest"

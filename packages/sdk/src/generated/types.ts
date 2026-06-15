@@ -1155,6 +1155,7 @@ export interface components {
             lap_count: number | null;
             lap_distance: number | null;
             registration_limit: number | null;
+            sem_classificacao: boolean;
             status: string;
             categories?: components["schemas"]["CategoryResource"][];
             prize_rules?: components["schemas"]["PrizeRuleResource"][];
@@ -1519,6 +1520,8 @@ export interface components {
             lap_distance?: number | null;
             registration_limit?: number | null;
             status?: components["schemas"]["CommonStatus"];
+            /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
+            sem_classificacao?: boolean | null;
         };
         /**
          * StoreRegistrationFieldRequest
@@ -1736,6 +1739,8 @@ export interface components {
             lap_distance?: number | null;
             registration_limit?: number | null;
             status?: components["schemas"]["CommonStatus"];
+            /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
+            sem_classificacao?: boolean;
         };
         /**
          * UpdateRegistrationFieldRequest
@@ -4651,6 +4656,10 @@ export interface operations {
                             hub: {
                                 id: string;
                                 name: string;
+                                /**
+                                 * @description `slug` no contrato da API = coluna `subdomain` do hub (ex.: 'cronoserv').
+                                 *     Não existe coluna `slug`; o identificador estável é o subdomain.
+                                 */
                                 slug: string;
                             };
                             scopes: string | [
