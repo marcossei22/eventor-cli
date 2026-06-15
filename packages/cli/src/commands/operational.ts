@@ -159,6 +159,34 @@ export function registerOperational(program: Command, deps: CliDeps): void {
         await ctx.client().request('delete', '/events/{event}/results', { path: { event: key } }),
       );
     });
+
+  result
+    .command('status')
+    .description('Marca o resultado de UMA prova como provisional|homologated. Decisão explícita do hub — import nunca muda esse status. É reversível.')
+    .argument('<status>', 'provisional | homologated')
+    .option('--event <idOrCode>', 'id ou código do evento')
+    .option('--race <id>', 'id da prova (homologação é por prova)')
+    .action(async (status: string, _opts, command: Command) => {
+      const ctx = ctxOf(command);
+      const flags = flagsOf(command);
+      const key = requireEvent(flags);
+
+      if (status !== 'provisional' && status !== 'homologated') {
+        throw new CliUsageError(`Status inválido: ${status}`, 'Use provisional ou homologated.');
+      }
+      const race = flags.race?.trim();
+      if (!race) {
+        throw new CliUsageError('Faltou identificar a prova.', 'Passe --race <id> (a homologação é por prova).');
+      }
+
+      emit(
+        ctx.io,
+        await ctx.client().request('patch', '/events/{event}/races/{race}', {
+          path: { event: key, race: Number(race) },
+          body: { results_status: status } as never,
+        }),
+      );
+    });
 }
 
 function requireEvent(flags: OperationalFlags): string {
