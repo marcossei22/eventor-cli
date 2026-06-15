@@ -43,7 +43,9 @@ eventor event setup --from spec.json             # executa idempotente; re-rodar
              "city": "São Paulo", "state": "SP", "service_fee_cents": 990 },
   "organizer": { "name": "Run Brasil Eventos", "document": "12345678000190" },
   "races": [ { "name": "10K", "distance": 10,
-               "categories": [ { "name": "Geral M", "sex": "M", "award_count": 3 } ] } ],
+               "categories": [ { "name": "Geral M", "sex": "M", "award_count": 3 } ] },
+             { "name": "KIDS", "distance": 0.4, "sem_classificacao": true,
+               "categories": [ { "name": "5-7 anos" } ] } ],
   "registration_settings": { "is_free": false, "max_registrations": 3000 },
   "batches": [ { "name": "1º Lote", "max_installments": 6, "race_prices": { "10K": 12900 } } ],
   "registration_fields": [ { "label": "Tamanho da camiseta", "type": "select",
@@ -54,6 +56,8 @@ eventor event setup --from spec.json             # executa idempotente; re-rodar
 
 > `race_prices` usa o **nome da prova** (ex.: `"10K"`); o CLI resolve pra `race_id`.
 > Preços em **centavos**. `--dry-run` mostra o mapeamento.
+> `sem_classificacao: true` numa prova (ex.: KIDS) — prova sem cronometragem: no
+> portal de resultados aparece como **lista de inscritos**, sem tempo/colocação.
 
 Fluxo headless completo:
 
