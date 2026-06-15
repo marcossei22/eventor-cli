@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { createClient, type EventorClient, type EventorClientOptions } from '@eventor-run/sdk';
 
 import { NoTtyError } from './errors.js';
@@ -70,4 +72,16 @@ export class CliContext {
   }
 }
 
-export const CLI_VERSION = '0.3.0';
+/**
+ * Versão lida do package.json em runtime — fonte única, sem drift no release.
+ * `../package.json` resolve igual no bundle (dist/index.js) e nos testes
+ * (src/context.ts): ambos ficam um nível abaixo de packages/cli/.
+ */
+export const CLI_VERSION: string = (() => {
+  try {
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version?: string };
+    return pkg.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
