@@ -685,7 +685,17 @@ export interface paths {
         get: operations["registrations.index"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * DELETE /api/v1/events/{event}/registrations
+         * @description Apaga em lote as inscrições do evento — caso de uso: import de API/CSV
+         *     que entrou errado e precisa ser limpo e reimportado. NUNCA toca inscrição
+         *     de checkout (origin online): essas têm pedido/pagamento e só saem por
+         *     cancelamento no painel.
+         *
+         *     Filtros opcionais: ?race_id, ?status, ?origin (api|csv). ?origin=online
+         *     é recusado — checkout não se apaga em lote.
+         */
+        delete: operations["registrations.destroyByEvent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -719,7 +729,13 @@ export interface paths {
         get: operations["results.index"];
         put?: never;
         post?: never;
-        delete?: never;
+        /**
+         * DELETE /api/v1/events/{event}/results
+         * @description Limpa TODOS os resultados do evento (inclusive trashed) — desfaz um
+         *     import errado inteiro de uma vez, sem precisar varrer prova por prova.
+         *     Resultado não tem pagamento atrelado, então não há proteção tipo checkout.
+         */
+        delete: operations["results.destroyByEvent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5763,6 +5779,79 @@ export interface operations {
             };
         };
     };
+    "registrations.destroyByEvent": {
+        parameters: {
+            query?: {
+                race_id?: number;
+                status?: string;
+            };
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            deleted: number;
+                        };
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "registrations.destroy": {
         parameters: {
             query?: never;
@@ -5884,6 +5973,76 @@ export interface operations {
             };
             /** @description Recurso não encontrado neste hub. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "results.destroyByEvent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            deleted: number;
+                        };
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

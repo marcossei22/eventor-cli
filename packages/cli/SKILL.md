@@ -75,8 +75,8 @@ eventor event show --event MAR2026 --json     # read-back pra conferir
 | montar evento inteiro | `eventor event setup --from spec.json` |
 | referência (resolver ids) | `eventor modality` · `race-template` · `product` · `pipeline-stage` |
 | organizadores / vendedores | `eventor organizer list\|create` · `eventor salesperson list\|create` |
-| listar inscrições / apagar inscrição de import | `eventor registration list\|delete --event <code>` |
-| listar resultados / apagar / limpar prova | `eventor result list\|delete\|clear --event <code>` |
+| inscrições: listar / apagar uma / limpar em lote | `eventor registration list\|delete\|clear --event <code>` |
+| resultados: listar / apagar / limpar prova ou evento | `eventor result list\|delete\|clear --event <code>` |
 | qualquer endpoint do spec | `eventor api <METHOD> <path>` |
 
 `--event` aceita **id ou code** (a API resolve os dois).
@@ -100,15 +100,25 @@ Tolera o path: `/events`, `/v1/events` e a URL completa funcionam igual.
 ## Apagar inscrições e resultados (destrutivo — exige `--yes`)
 
 ```bash
-eventor registration delete 42 --event MAR2026 --yes   # só inscrição subida via API/CSV
-eventor result delete 99 --event MAR2026 --yes         # hard delete (some do site)
-eventor result clear --event MAR2026 --race 7 --yes    # limpa a prova inteira (reimport limpo)
+# pontual
+eventor registration delete 42 --event MAR2026 --yes   # uma inscrição (só API/CSV)
+eventor result delete 99 --event MAR2026 --yes         # um resultado (hard delete)
+
+# em lote (desfazer import errado antes de reimportar)
+eventor registration clear --event MAR2026 --yes               # todas as de API/CSV do evento
+eventor registration clear --event MAR2026 --race 7 --yes      # só de uma prova
+eventor registration clear --event MAR2026 --origin csv --yes  # só de uma origem
+eventor result clear --event MAR2026 --yes             # TODOS os resultados do evento
+eventor result clear --event MAR2026 --race 7 --yes    # só de uma prova
 ```
 
-- Inscrição de **checkout** (origin `online`) é recusada com 409 `registration_from_checkout`
-  — tem pedido/pagamento atrelado; o caminho é cancelar pelo painel.
-- `result clear` é o jeito certo de desfazer um import errado: apaga tudo da prova
-  (inclusive desclassificados) e o próximo `POST /results` recria do zero.
+- Inscrição de **checkout** (origin `online`) NUNCA é apagada — nem no `delete`
+  (409 `registration_from_checkout`) nem no `clear` (que só varre API/CSV;
+  `--origin online` é recusado com 422 `cannot_bulk_delete_checkout`). Tem
+  pedido/pagamento atrelado; o caminho é cancelar pelo painel.
+- `clear` é o jeito certo de desfazer um import errado: apaga tudo
+  (inclusive desclassificados) e o próximo `POST /results`/`/registrations`
+  recria do zero. Resposta traz `{"data":{"deleted":n}}`.
 
 ## Flags úteis (em qualquer comando)
 
