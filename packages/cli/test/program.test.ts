@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { describe, expect, it } from 'vitest';
 
 import { runCli } from './harness.js';
@@ -51,6 +53,16 @@ describe('contrato de I/O e exit codes', () => {
   it('comando desconhecido → exit 2', async () => {
     const r = await runCli(['frobnicate'], [{ status: 200, body: {} }]);
     expect(r.code).toBe(2);
+  });
+
+  it('--version → versão do package.json (sem drift), exit 0', async () => {
+    // Guard de regressão: CLI_VERSION precisa sair do package.json, não de uma
+    // constante hardcoded (que ficou presa em 0.3.0 pelos releases 0.4/0.5).
+    const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
+    const r = await runCli(['--version'], []);
+    expect(r.code).toBe(0);
+    expect(r.stdout.trim()).toBe(pkg.version);
+    expect(r.calls).toHaveLength(0);
   });
 });
 
