@@ -1157,12 +1157,19 @@ export interface components {
             registration_limit: number | null;
             sem_classificacao: boolean;
             status: string;
+            results_status: string;
             categories?: components["schemas"]["CategoryResource"][];
             prize_rules?: components["schemas"]["PrizeRuleResource"][];
             categories_count?: string;
             created_at: string;
             updated_at: string;
         };
+        /**
+         * RaceResultsStatus
+         * @description Status de publicação do resultado de uma prova (race) como um todo. Provisório  → resultado publicado, mas ainda sujeito a recurso/correção. Homologado  → resultado oficial, chancelado pelo hub.  O status NUNCA muda por import (decisão do Marcos, 2026-06-12): só por ação explícita na UI do hub ou via API (integrations /results-status e v1 PATCH race).
+         * @enum {string}
+         */
+        RaceResultsStatus: "provisional" | "homologated";
         /** RaceTemplateResource */
         RaceTemplateResource: {
             id: number;
@@ -1741,6 +1748,7 @@ export interface components {
             status?: components["schemas"]["CommonStatus"];
             /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
             sem_classificacao?: boolean;
+            results_status?: components["schemas"]["RaceResultsStatus"];
         };
         /**
          * UpdateRegistrationFieldRequest

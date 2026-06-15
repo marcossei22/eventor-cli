@@ -8439,6 +8439,9 @@
                     "status": {
                         "type": "string"
                     },
+                    "results_status": {
+                        "type": "string"
+                    },
                     "categories": {
                         "type": "array",
                         "items": {
@@ -8478,10 +8481,20 @@
                     "registration_limit",
                     "sem_classificacao",
                     "status",
+                    "results_status",
                     "created_at",
                     "updated_at"
                 ],
                 "title": "RaceResource"
+            },
+            "RaceResultsStatus": {
+                "type": "string",
+                "description": "Status de publica\u00e7\u00e3o do resultado de uma prova (race) como um todo. Provis\u00f3rio  \u2192 resultado publicado, mas ainda sujeito a recurso/corre\u00e7\u00e3o. Homologado  \u2192 resultado oficial, chancelado pelo hub.  O status NUNCA muda por import (decis\u00e3o do Marcos, 2026-06-12): s\u00f3 por a\u00e7\u00e3o expl\u00edcita na UI do hub ou via API (integrations /results-status e v1 PATCH race).\n",
+                "enum": [
+                    "provisional",
+                    "homologated"
+                ],
+                "title": "RaceResultsStatus"
             },
             "RaceTemplateResource": {
                 "type": "object",
@@ -10619,6 +10632,9 @@
                     "sem_classificacao": {
                         "type": "boolean",
                         "description": "Prova sem cronometragem (ex.: KIDS) \u2014 portal exibe lista de inscritos."
+                    },
+                    "results_status": {
+                        "$ref": "#/components/schemas/RaceResultsStatus"
                     }
                 },
                 "title": "UpdateRaceRequest"

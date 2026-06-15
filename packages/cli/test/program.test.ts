@@ -153,6 +153,42 @@ describe('mapeamento de comandos', () => {
     expect(JSON.parse(r.stdout).data.deleted).toBe(980);
   });
 
+  it('result status homologated → PATCH /events/{event}/races/{race} com results_status', async () => {
+    const r = await runCli(
+      ['result', 'status', 'homologated', '--event', 'MAR2026', '--race', '7'],
+      [{ status: 200, body: { data: { id: 7, results_status: 'homologated' } } }],
+    );
+    expect(r.code).toBe(0);
+    expect(r.calls[0]).toMatchObject({
+      method: 'PATCH',
+      url: 'https://api.test/api/v1/events/MAR2026/races/7',
+      body: { results_status: 'homologated' },
+    });
+    expect(JSON.parse(r.stdout).data.results_status).toBe('homologated');
+  });
+
+  it('result status provisional → PATCH com results_status provisional', async () => {
+    const r = await runCli(
+      ['result', 'status', 'provisional', '--event', 'MAR2026', '--race', '7'],
+      [{ status: 200, body: { data: { id: 7, results_status: 'provisional' } } }],
+    );
+    expect(r.code).toBe(0);
+    expect(r.calls[0]!.body).toMatchObject({ results_status: 'provisional' });
+  });
+
+  it('result status com valor inválido → exit 2 e nenhuma chamada', async () => {
+    const r = await runCli(['result', 'status', 'oficial', '--event', 'MAR2026', '--race', '7'], [{ status: 200 }]);
+    expect(r.code).toBe(2);
+    expect(JSON.parse(r.stderr).error.code).toBe('usage_error');
+    expect(r.calls).toHaveLength(0);
+  });
+
+  it('result status sem --race → exit 2 e nenhuma chamada', async () => {
+    const r = await runCli(['result', 'status', 'homologated', '--event', 'MAR2026'], [{ status: 200 }]);
+    expect(r.code).toBe(2);
+    expect(r.calls).toHaveLength(0);
+  });
+
   it('registration clear --yes → DELETE /events/{event}/registrations com filtros', async () => {
     const r = await runCli(
       ['registration', 'clear', '--event', 'MAR2026', '--race', '7', '--origin', 'api', '--yes'],

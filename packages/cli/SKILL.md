@@ -81,6 +81,7 @@ eventor event show --event MAR2026 --json     # read-back pra conferir
 | organizadores / vendedores | `eventor organizer list\|create` · `eventor salesperson list\|create` |
 | inscrições: listar / apagar uma / limpar em lote | `eventor registration list\|delete\|clear --event <code>` |
 | resultados: listar / apagar / limpar prova ou evento | `eventor result list\|delete\|clear --event <code>` |
+| homologar / voltar pra provisório uma prova | `eventor result status homologated\|provisional --event <code> --race <id>` |
 | qualquer endpoint do spec | `eventor api <METHOD> <path>` |
 
 `--event` aceita **id ou code** (a API resolve os dois).
@@ -123,6 +124,24 @@ eventor result clear --event MAR2026 --race 7 --yes    # só de uma prova
 - `clear` é o jeito certo de desfazer um import errado: apaga tudo
   (inclusive desclassificados) e o próximo `POST /results`/`/registrations`
   recria do zero. Resposta traz `{"data":{"deleted":n}}`.
+
+## Homologar resultado (provisório → oficial)
+
+O resultado de cada **prova** tem um status de publicação (`results_status`):
+`provisional` (recém-publicado, ainda sujeito a recurso/correção) ou
+`homologated` (oficial, chancelado pelo hub). É **por prova** — a 5K pode estar
+homologada com a 10K ainda provisória. No portal público, prova provisória mostra
+um aviso "resultado provisório"; homologada vira "resultado oficial".
+
+```bash
+eventor result status homologated  --event MAR2026 --race 7   # marca a prova 7 como oficial
+eventor result status provisional  --event MAR2026 --race 7   # volta pra provisório (reversível)
+```
+
+- A homologação é uma **decisão explícita** — reimportar resultados (`POST /results`)
+  **nunca** muda o status. Toda prova nova nasce `provisional`.
+- `--race` é obrigatório (homologação é por prova). É reversível, então não exige `--yes`.
+- Resposta traz a prova atualizada: `{"data":{"id":7,"results_status":"homologated"}}`.
 
 ## Flags úteis (em qualquer comando)
 
