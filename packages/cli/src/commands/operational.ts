@@ -10,6 +10,7 @@ type OperationalFlags = GlobalFlags & {
   race?: string;
   category?: string;
   status?: string;
+  origin?: string;
   q?: string;
 };
 
@@ -25,7 +26,7 @@ export function registerOperational(program: Command, deps: CliDeps): void {
   // ----------------------------------------------------------- registration
   const registration = program
     .command('registration')
-    .description('Inscrições de um evento (listar + apagar as subidas via API/CSV).');
+    .description('Inscrições de um evento (listar, apagar uma, ou limpar em lote as de API/CSV).');
 
   registration
     .command('list')
@@ -71,10 +72,26 @@ export function registerOperational(program: Command, deps: CliDeps): void {
       );
     });
 
+  registration
+    .command('clear')
+    .description('Apaga EM LOTE as inscrições do evento subidas via API/CSV. Checkout (online) é sempre preservado. Filtros opcionais por prova/status/origem.')
+    .option('--event <idOrCode>', 'id ou código do evento')
+    .option('--race <id>', 'limita a uma prova')
+    .option('--status <status>', 'limita a um status (confirmed|canceled)')
+    .option('--origin <origin>', 'limita a uma origem (api|csv) — online é recusado (422)')
+    .action(async (_opts, command: Command) => {
+      const ctx = ctxOf(command);
+      const flags = flagsOf(command);
+      const key = requireEvent(flags);
+      ctx.ensureConfirmed();
+      const query = clean({ race_id: flags.race, status: flags.status, origin: flags.origin });
+      emit(ctx.io, await ctx.client().api('DELETE', `/events/${encodeURIComponent(key)}/registrations`, { query }));
+    });
+
   // ----------------------------------------------------------------- result
   const result = program
     .command('result')
-    .description('Resultados de um evento (listar, apagar pontual, limpar a prova).');
+    .description('Resultados de um evento (listar, apagar pontual, limpar prova ou evento inteiro).');
 
   result
     .command('list')
@@ -120,19 +137,26 @@ export function registerOperational(program: Command, deps: CliDeps): void {
 
   result
     .command('clear')
-    .description('Apaga TODOS os resultados de uma prova (desfaz um import errado antes de reimportar).')
+    .description('Apaga TODOS os resultados — do evento inteiro, ou de uma prova com --race. Desfaz um import errado antes de reimportar.')
     .option('--event <idOrCode>', 'id ou código do evento')
-    .requiredOption('--race <id>', 'id da prova')
+    .option('--race <id>', 'limita a uma prova (sem --race = evento inteiro)')
     .action(async (_opts, command: Command) => {
       const ctx = ctxOf(command);
       const flags = flagsOf(command);
       const key = requireEvent(flags);
       ctx.ensureConfirmed();
+      if (flags.race) {
+        emit(
+          ctx.io,
+          await ctx.client().request('delete', '/events/{event}/races/{race}/results', {
+            path: { event: key, race: String(flags.race) },
+          }),
+        );
+        return;
+      }
       emit(
         ctx.io,
-        await ctx.client().request('delete', '/events/{event}/races/{race}/results', {
-          path: { event: key, race: String(flags.race) },
-        }),
+        await ctx.client().request('delete', '/events/{event}/results', { path: { event: key } }),
       );
     });
 }

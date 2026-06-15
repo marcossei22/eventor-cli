@@ -142,4 +142,42 @@ describe('mapeamento de comandos', () => {
     expect(r.code).toBe(2);
     expect(r.calls).toHaveLength(0);
   });
+
+  it('result clear sem --race → DELETE /events/{event}/results (evento inteiro)', async () => {
+    const r = await runCli(
+      ['result', 'clear', '--event', 'MAR2026', '--yes'],
+      [{ status: 200, body: { data: { deleted: 980 } } }],
+    );
+    expect(r.code).toBe(0);
+    expect(r.calls[0]).toMatchObject({ method: 'DELETE', url: 'https://api.test/api/v1/events/MAR2026/results' });
+    expect(JSON.parse(r.stdout).data.deleted).toBe(980);
+  });
+
+  it('registration clear --yes → DELETE /events/{event}/registrations com filtros', async () => {
+    const r = await runCli(
+      ['registration', 'clear', '--event', 'MAR2026', '--race', '7', '--origin', 'api', '--yes'],
+      [{ status: 200, body: { data: { deleted: 145 } } }],
+    );
+    expect(r.code).toBe(0);
+    expect(r.calls[0]).toMatchObject({
+      method: 'DELETE',
+      url: 'https://api.test/api/v1/events/MAR2026/registrations?race_id=7&origin=api',
+    });
+    expect(JSON.parse(r.stdout).data.deleted).toBe(145);
+  });
+
+  it('registration clear sem --yes → exit 2 e nenhuma chamada', async () => {
+    const r = await runCli(['registration', 'clear', '--event', 'MAR2026'], [{ status: 200 }]);
+    expect(r.code).toBe(2);
+    expect(r.calls).toHaveLength(0);
+  });
+
+  it('registration clear --origin online → 422 → exit 1', async () => {
+    const r = await runCli(
+      ['registration', 'clear', '--event', 'MAR2026', '--origin', 'online', '--yes'],
+      [{ status: 422, body: { error: 'cannot_bulk_delete_checkout', message: 'checkout não' } }],
+    );
+    expect(r.code).toBe(1);
+    expect(JSON.parse(r.stderr).error.code).toBe('cannot_bulk_delete_checkout');
+  });
 });
