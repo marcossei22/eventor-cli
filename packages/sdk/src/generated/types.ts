@@ -1265,6 +1265,7 @@ export interface components {
             gun_time: string | null;
             overall_position: number | null;
             category_position: number | null;
+            gender_position: number | null;
             average_pace: string | null;
             average_speed: string | null;
             lap_count: number | null;
