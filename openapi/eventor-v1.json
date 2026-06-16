@@ -8886,6 +8886,12 @@
                             "null"
                         ]
                     },
+                    "gender_position": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "average_pace": {
                         "type": [
                             "string",
@@ -8939,6 +8945,7 @@
                     "gun_time",
                     "overall_position",
                     "category_position",
+                    "gender_position",
                     "average_pace",
                     "average_speed",
                     "lap_count",
