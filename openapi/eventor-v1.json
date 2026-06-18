@@ -849,7 +849,7 @@
         "/events/{event}/races/{race}/categories": {
             "get": {
                 "operationId": "categories.index",
-                "summary": "GET /api/v1/events/{event}/races/{race}/categories",
+                "summary": "GET /api/v1/events/{event}/races/{race}/categories \u2014 filtro opcional ?modality_id",
                 "tags": [
                     "Categories"
                 ],
@@ -1011,14 +1011,44 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/CategoryResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/JsonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "category_group_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "categories": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/components/schemas/CategoryResource"
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "category_group_id",
+                                                        "categories"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -1125,14 +1155,44 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/components/schemas/CategoryResource"
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/JsonResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "category_group_id": {
+                                                            "type": "string"
+                                                        },
+                                                        "categories": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/components/schemas/CategoryResource"
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "category_group_id",
+                                                        "categories"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
                                         }
-                                    },
-                                    "required": [
-                                        "data"
                                     ]
                                 }
                             }
@@ -4261,6 +4321,339 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "operationId": "modalities.store",
+                "summary": "POST /api/v1/modalities \u2014 cria uma modalidade do hub (reutiliz\u00e1vel em todas as provas)",
+                "tags": [
+                    "Modalities"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreModalityRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ModalityResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/modalities/{modality}/question": {
+            "get": {
+                "operationId": "modalityQuestions.show",
+                "summary": "GET /api/v1/modalities/{modality}/question \u2014 a pergunta do hub pra modalidade, ou 404",
+                "tags": [
+                    "ModalityQuestions"
+                ],
+                "parameters": [
+                    {
+                        "name": "modality",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ModalityQuestionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "operationId": "modalityQuestions.upsert",
+                "summary": "PUT /api/v1/modalities/{modality}/question \u2014 cria/atualiza por (hub, modalidade)",
+                "tags": [
+                    "ModalityQuestions"
+                ],
+                "parameters": [
+                    {
+                        "name": "modality",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpsertModalityQuestionRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ModalityQuestionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ModalityQuestionResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "modalityQuestions.destroy",
+                "summary": "DELETE /api/v1/modalities/{modality}/question \u2014 soft delete; 204",
+                "tags": [
+                    "ModalityQuestions"
+                ],
+                "parameters": [
+                    {
+                        "name": "modality",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/organizers": {
@@ -7170,6 +7563,12 @@
                             "null"
                         ]
                     },
+                    "category_group_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
                     "sex": {
                         "type": [
                             "string",
@@ -7235,6 +7634,7 @@
                     "name",
                     "type",
                     "modality_id",
+                    "category_group_id",
                     "sex",
                     "age_min",
                     "age_max",
@@ -8029,6 +8429,61 @@
                 ],
                 "title": "LegalDiscountType"
             },
+            "ModalityQuestionResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "modality_id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "options": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "help_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "modality_id",
+                    "label",
+                    "type",
+                    "options",
+                    "help_text",
+                    "is_active",
+                    "sort_order",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "ModalityQuestionResource"
+            },
             "ModalityResource": {
                 "type": "object",
                 "properties": {
@@ -8441,6 +8896,28 @@
                     },
                     "results_status": {
                         "type": "string"
+                    },
+                    "modalities": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "is_default": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name",
+                                "is_default"
+                            ]
+                        }
                     },
                     "categories": {
                         "type": "array",
@@ -9245,7 +9722,7 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "maxLength": 60
+                        "maxLength": 80
                     },
                     "type": {
                         "type": [
@@ -9258,7 +9735,8 @@
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "Atalho retrocompat (1 linha). Pra fan-out por modalidade, use modality_ids."
                     },
                     "sex": {
                         "type": [
@@ -9314,6 +9792,16 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/CommonStatus"
+                    },
+                    "modality_ids": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "description": "Materializa 1 categoria por modalidade marcada (subconjunto das da prova).",
+                        "items": {
+                            "type": "integer"
+                        }
                     }
                 },
                 "required": [
@@ -9612,6 +10100,20 @@
                 ],
                 "title": "StoreFinishVideoRequest"
             },
+            "StoreModalityRequest": {
+                "type": "object",
+                "description": "POST /api/v1/modalities \u2014 cria uma modalidade do hub (reutiliz\u00e1vel).\nGlobais (hub_id NULL) s\u00e3o read-only; esta rota cria sempre no hub autenticado.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 80
+                    }
+                },
+                "required": [
+                    "name"
+                ],
+                "title": "StoreModalityRequest"
+            },
             "StoreOrganizerRequest": {
                 "type": "object",
                 "description": "Cria\u00e7\u00e3o de organizador GLOBAL via Management API (Dom\u00ednio 0).\nEspelha a valida\u00e7\u00e3o do quick-create em Hub/Events/EventCreate::saveCreateOrganizer.",
@@ -9784,12 +10286,17 @@
                         ],
                         "maxLength": 20
                     },
+                    "default_modality_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "distance": {
                         "type": [
                             "number",
                             "null"
                         ],
-                        "description": "OBS: prova N\u00c3O tem modalidade no schema atual \u2014 races.modality_id foi\ndropado (migration 2026_04_28_000004). Modalidade vive em categories/registrations.",
                         "minimum": 0
                     },
                     "distance_label": {
@@ -9860,6 +10367,16 @@
                             "null"
                         ],
                         "description": "Prova sem cronometragem (ex.: KIDS) \u2014 portal exibe lista de inscritos."
+                    },
+                    "modality_ids": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "description": "Conjunto de modalidades da prova (PRD modalidade-n\u00edvel-prova).\nSincroniza race_modalities; default_modality_id marca a \"pura\" (Geral).",
+                        "items": {
+                            "type": "integer"
+                        }
                     }
                 },
                 "required": [
@@ -10107,7 +10624,7 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "maxLength": 60
+                        "maxLength": 80
                     },
                     "type": {
                         "type": [
@@ -10170,6 +10687,13 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/CommonStatus"
+                    },
+                    "modality_ids": {
+                        "type": "array",
+                        "description": "Reconcilia as irm\u00e3s do grupo desta categoria (propaga attrs + ajusta modalidades).",
+                        "items": {
+                            "type": "integer"
+                        }
                     }
                 },
                 "title": "UpdateCategoryRequest"
@@ -10570,6 +11094,12 @@
                         "type": "string",
                         "maxLength": 80
                     },
+                    "default_modality_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "distance": {
                         "type": [
                             "number",
@@ -10642,6 +11172,13 @@
                     },
                     "results_status": {
                         "$ref": "#/components/schemas/RaceResultsStatus"
+                    },
+                    "modality_ids": {
+                        "type": "array",
+                        "description": "Conjunto de modalidades da prova (sync race_modalities). Remo\u00e7\u00e3o \u00e9\nguardada: modalidade com inscri\u00e7\u00f5es/resultados \u2192 409.",
+                        "items": {
+                            "type": "integer"
+                        }
                     }
                 },
                 "title": "UpdateRaceRequest"
@@ -10821,6 +11358,52 @@
                     "rules"
                 ],
                 "title": "UpdateRetentionRequest"
+            },
+            "UpsertModalityQuestionRequest": {
+                "type": "object",
+                "description": "PUT /api/v1/modalities/{modality}/question \u2014 cria/atualiza a pergunta de opt-in\ndo hub autenticado pra aquela modalidade (1 por (hub, modalidade)).\n\n`options` \u00e9 obrigat\u00f3ria quando o tipo exige lista (select/multiselect),\nespelhando RegistrationFieldType::requiresOptions().",
+                "properties": {
+                    "label": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/RegistrationFieldType"
+                    },
+                    "options": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "help_text": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500
+                    },
+                    "is_active": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "sort_order": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "label",
+                    "type"
+                ],
+                "title": "UpsertModalityQuestionRequest"
             }
         },
         "responses": {

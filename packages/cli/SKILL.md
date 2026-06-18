@@ -43,13 +43,16 @@ eventor event setup --from spec.json             # executa idempotente; re-rodar
              "city": "São Paulo", "state": "SP", "service_fee_cents": 990 },
   "organizer": { "name": "Run Brasil Eventos", "document": "12345678000190" },
   "races": [ { "name": "10K", "distance": 10,
-               "categories": [ { "name": "Geral M", "sex": "M", "award_count": 3 } ] },
+               "modalities": ["Geral", "Morador"], "default_modality": "Geral",
+               "categories": [ { "name": "Geral M", "sex": "M", "award_count": 3 },
+                               { "name": "Fem 30-39", "sex": "F", "modalities": ["Geral"] } ] },
              { "name": "KIDS", "distance": 0.4, "sem_classificacao": true,
                "categories": [ { "name": "5-7 anos" } ] } ],
   "registration_settings": { "is_free": false, "max_registrations": 3000 },
   "batches": [ { "name": "1º Lote", "max_installments": 6, "race_prices": { "10K": 12900 } } ],
   "registration_fields": [ { "label": "Tamanho da camiseta", "type": "select",
                              "options": [ { "value": "P", "label": "P" }, { "value": "M", "label": "M" } ] } ],
+  "modality_questions": [ { "modality": "Morador", "label": "Sou morador (anexe o comprovante)", "type": "file" } ],
   "publish": false
 }
 ```
@@ -58,6 +61,22 @@ eventor event setup --from spec.json             # executa idempotente; re-rodar
 > Preços em **centavos**. `--dry-run` mostra o mapeamento.
 > `sem_classificacao: true` numa prova (ex.: KIDS) — prova sem cronometragem: no
 > portal de resultados aparece como **lista de inscritos**, sem tempo/colocação.
+
+### Modalidades (por NOME no spec — o CLI resolve/cria)
+
+- `races[].modalities` é o **conjunto** de modalidades da prova, por **nome**
+  (ex.: `["Geral","Morador"]`). O CLI resolve pra id; **nome que não existe é
+  criado** (`POST /modalities`, modalidade do hub, reutilizável) e usado.
+- `races[].default_modality` é a modalidade padrão/"pura" (default = `"Geral"` ou
+  a primeira). No portal de resultados ela aparece sem sufixo; as outras viram
+  `"10K Morador"`.
+- `categories[].modalities` (opcional) restringe a categoria a um **subconjunto**
+  das modalidades da prova. **Omitido = vale em todas** as modalidades da prova.
+- `modality_questions` (nível hub) define a **pergunta de opt-in** de uma
+  modalidade: quem responder isso no checkout entra naquela modalidade. `type`:
+  `checkbox` | `text` | `file` | `select`. Idempotente.
+- Modalidade vai sempre por **nome** no spec (o CLI faz "cria-primeiro-pega-id"
+  por baixo). Avulso: `eventor modality create --name "Atleta Local"`.
 
 Fluxo headless completo:
 
@@ -78,6 +97,7 @@ eventor event show --event MAR2026 --json     # read-back pra conferir
 | subir logo/banner/PDF | `eventor event upload --event <code> --kind logo --file ./logo.png` |
 | montar evento inteiro | `eventor event setup --from spec.json` |
 | referência (resolver ids) | `eventor modality` · `race-template` · `product` · `pipeline-stage` |
+| criar modalidade / pergunta de opt-in | `eventor modality create --name <nome>` · `eventor modality question --modality <id> --label <txt> --type checkbox\|file` |
 | organizadores / vendedores | `eventor organizer list\|create` · `eventor salesperson list\|create` |
 | inscrições: listar / apagar uma / limpar em lote | `eventor registration list\|delete\|clear --event <code>` |
 | resultados: listar / apagar / limpar prova ou evento | `eventor result list\|delete\|clear --event <code>` |
