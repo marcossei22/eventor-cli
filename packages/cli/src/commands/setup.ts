@@ -11,10 +11,20 @@ import { emit } from '../output.js';
 interface EventSpec {
   event: Record<string, unknown> & { code?: string; name?: string };
   organizer?: Record<string, unknown> & { name?: string; document?: string };
-  races?: Array<Record<string, unknown> & { name: string; categories?: Array<Record<string, unknown> & { name: string }> }>;
+  races?: Array<
+    Record<string, unknown> & {
+      name: string;
+      // Modalidades da prova por NOME; o CLI resolve/cria (POST /modalities) → modality_ids.
+      modalities?: string[];
+      default_modality?: string;
+      categories?: Array<Record<string, unknown> & { name: string; modalities?: string[] }>;
+    }
+  >;
   registration_settings?: Record<string, unknown>;
   batches?: Array<Record<string, unknown> & { name: string; race_prices?: Record<string, number> }>;
   registration_fields?: Array<Record<string, unknown> & { label: string }>;
+  // Pergunta de opt-in por modalidade (nível hub) — quem responder no checkout entra na modalidade.
+  modality_questions?: Array<{ modality: string; label: string; type?: string; options?: unknown }>;
   publish?: boolean;
 }
 
@@ -85,6 +95,9 @@ class SetupRunner {
    *  não dá pra listar subrecursos dele — GET /events/{code}/races daria 404. */
   private eventExists = false;
 
+  /** nome (lowercase) → id da modalidade (resolvido/criado em ensureModalities). */
+  private readonly modalityIdByName = new Map<string, number | string>();
+
   constructor(
     private readonly client: EventorClient,
     private readonly apply: boolean,
@@ -96,15 +109,19 @@ class SetupRunner {
 
     const eventKey = await this.ensureEvent(spec.event, organizerId);
 
+    // Modalidades (nível hub) resolvidas/criadas por NOME → id, antes das provas.
+    await this.ensureModalities(spec);
+
     const raceIdByName = new Map<string, number | string>();
     for (const race of spec.races ?? []) {
+      const raceModalityIds = Array.isArray(race.modalities) ? this.resolveModalityIds(race.modalities) : [];
       const raceId = await this.ensureRace(eventKey, race);
       // Em dry-run a race "would_create" não tem id ainda — guarda um placeholder
       // pelo nome só pra validar as referências de race_prices (o body não é enviado).
       raceIdByName.set(race.name, raceId ?? `<${race.name}>`);
       if (raceId !== undefined) {
         for (const category of race.categories ?? []) {
-          await this.ensureCategory(eventKey, raceId, category);
+          await this.ensureCategory(eventKey, raceId, category, raceModalityIds);
         }
       }
     }
@@ -119,6 +136,10 @@ class SetupRunner {
 
     for (const field of spec.registration_fields ?? []) {
       await this.ensureField(eventKey, field);
+    }
+
+    for (const question of spec.modality_questions ?? []) {
+      await this.ensureModalityQuestion(question);
     }
 
     if (spec.publish) {
@@ -177,35 +198,132 @@ class SetupRunner {
     return String((created as Envelope).data?.code ?? (created as Envelope).data?.id);
   }
 
+  // -------------------------------------------------------------- modalities
+
+  /** Resolve por NOME as modalidades referenciadas no spec; cria as que faltam (POST /modalities). */
+  private async ensureModalities(spec: EventSpec): Promise<void> {
+    const names = new Set<string>();
+    for (const race of spec.races ?? []) {
+      for (const m of race.modalities ?? []) names.add(m);
+      if (race.default_modality) names.add(race.default_modality);
+      for (const cat of race.categories ?? []) for (const m of cat.modalities ?? []) names.add(m);
+    }
+    for (const q of spec.modality_questions ?? []) if (q.modality) names.add(q.modality);
+    if (names.size === 0) return;
+
+    for (const m of await this.list('/modalities')) {
+      const id = num(m.id);
+      if (id !== undefined) this.modalityIdByName.set(str(m.name).toLowerCase(), id);
+    }
+
+    for (const name of names) {
+      const key = name.toLowerCase();
+      if (this.modalityIdByName.has(key)) {
+        this.record('modality', name, 'unchanged');
+        continue;
+      }
+      this.record('modality', name, this.apply ? 'created' : 'would_create');
+      if (this.apply) {
+        const created = await this.write('POST', '/modalities', undefined, { name });
+        const id = num((created as Envelope).data?.id);
+        if (id !== undefined) this.modalityIdByName.set(key, id);
+      } else {
+        this.modalityIdByName.set(key, `<${name}>`); // placeholder dry-run (não é enviado)
+      }
+    }
+  }
+
+  private resolveModalityIds(names: string[]): Array<number | string> {
+    return names.map((n) => this.resolveModalityId(n));
+  }
+
+  private resolveModalityId(name: string): number | string {
+    const id = this.modalityIdByName.get(name.toLowerCase());
+    if (id === undefined) {
+      throw new CliUsageError(
+        `Modalidade "${name}" não foi resolvida.`,
+        'Use o mesmo nome em races[].modalities / categories[].modalities / modality_questions.',
+      );
+    }
+    return id;
+  }
+
+  /** Pergunta de opt-in da modalidade (por hub). PUT idempotente. */
+  private async ensureModalityQuestion(q: { modality: string; label: string; type?: string; options?: unknown }): Promise<void> {
+    const id = this.resolveModalityId(q.modality);
+    this.record('modality_question', `${q.modality}: ${q.label}`, this.apply ? 'updated' : 'would_update');
+    if (this.apply && typeof id === 'number') {
+      await this.write('PUT', '/modalities/{modality}/question', { modality: id }, {
+        label: q.label,
+        type: q.type ?? 'checkbox',
+        ...(q.options !== undefined ? { options: q.options } : {}),
+      });
+    }
+  }
+
   // -------------------------------------------------------------------- race
 
   private async ensureRace(eventKey: string, race: Record<string, unknown>): Promise<number | string | undefined> {
+    // modalities(nome) → modality_ids(id) + default_modality(nome) → default_modality_id.
+    const body = { ...race };
+    delete body.modalities;
+    delete body.default_modality;
+    if (Array.isArray(race.modalities)) {
+      const ids = this.resolveModalityIds(race.modalities as string[]);
+      body.modality_ids = ids;
+      const def = race.default_modality ? this.resolveModalityId(race.default_modality as string) : ids[0];
+      if (def !== undefined) body.default_modality_id = def;
+    }
+
     const existing = (await this.existingEventChildren('/events/{event}/races', { event: eventKey })).find(
       (r) => str(r.name) === str(race.name),
     );
 
-    const action = this.decide(existing, race);
+    // modality_ids é array (shallowMatches ignora arrays); quando declarado, força o
+    // sync do conjunto a cada run (idempotente no servidor).
+    let action = this.decide(existing, body);
+    if (existing && action === 'unchanged' && Array.isArray(body.modality_ids)) {
+      action = this.apply ? 'updated' : 'would_update';
+    }
     this.record('race', str(race.name), action);
 
     if (existing) {
       const id = num(existing.id);
       if (this.apply && action !== 'unchanged' && id !== undefined) {
-        await this.write('PATCH', '/events/{event}/races/{race}', { event: eventKey, race: id }, race);
+        await this.write('PATCH', '/events/{event}/races/{race}', { event: eventKey, race: id }, body);
       }
       return id;
     }
 
     if (!this.apply) return undefined;
-    const created = await this.write('POST', '/events/{event}/races', { event: eventKey }, race);
+    const created = await this.write('POST', '/events/{event}/races', { event: eventKey }, body);
     return num((created as Envelope).data?.id);
   }
 
-  private async ensureCategory(eventKey: string, raceId: number | string, category: Record<string, unknown>): Promise<void> {
+  private async ensureCategory(
+    eventKey: string,
+    raceId: number | string,
+    category: Record<string, unknown>,
+    raceModalityIds: Array<number | string>,
+  ): Promise<void> {
+    // categories[].modalities(nome) → modality_ids(id). Sem modalidades na categoria,
+    // herda TODAS as da prova (default do Hub: categoria nasce em todas as modalidades).
+    const body = { ...category };
+    delete body.modalities;
+    const modalityIds = Array.isArray(category.modalities)
+      ? this.resolveModalityIds(category.modalities as string[])
+      : raceModalityIds;
+    if (modalityIds.length > 0) body.modality_ids = modalityIds;
+
     const existing = (
       await this.existingEventChildren('/events/{event}/races/{race}/categories', { event: eventKey, race: raceId })
     ).find((c) => str(c.name) === str(category.name));
 
-    const action = this.decide(existing, category);
+    // Com modality_ids (array, ignorado por shallowMatches), força o reconcile do grupo.
+    let action = this.decide(existing, body);
+    if (existing && action === 'unchanged' && Array.isArray(body.modality_ids)) {
+      action = this.apply ? 'updated' : 'would_update';
+    }
     this.record('category', `${category.name}`, action);
 
     if (!this.apply) return;
@@ -216,12 +334,12 @@ class SetupRunner {
           'PATCH',
           '/events/{event}/races/{race}/categories/{category}',
           { event: eventKey, race: raceId, category: id },
-          category,
+          body,
         );
       }
       return;
     }
-    await this.write('POST', '/events/{event}/races/{race}/categories', { event: eventKey, race: raceId }, category);
+    await this.write('POST', '/events/{event}/races/{race}/categories', { event: eventKey, race: raceId }, body);
   }
 
   // ------------------------------------------------------- registration settings

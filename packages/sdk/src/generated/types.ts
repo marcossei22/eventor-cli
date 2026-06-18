@@ -83,7 +83,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** GET /api/v1/events/{event}/races/{race}/categories */
+        /** GET /api/v1/events/{event}/races/{race}/categories — filtro opcional ?modality_id */
         get: operations["categories.index"];
         put?: never;
         /** POST /api/v1/events/{event}/races/{race}/categories */
@@ -475,8 +475,28 @@ export interface paths {
         /** GET /api/v1/modalities — globais + do hub, ativas */
         get: operations["modalities.index"];
         put?: never;
-        post?: never;
+        /** POST /api/v1/modalities — cria uma modalidade do hub (reutilizável em todas as provas) */
+        post: operations["modalities.store"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/modalities/{modality}/question": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api/v1/modalities/{modality}/question — a pergunta do hub pra modalidade, ou 404 */
+        get: operations["modalityQuestions.show"];
+        /** PUT /api/v1/modalities/{modality}/question — cria/atualiza por (hub, modalidade) */
+        put: operations["modalityQuestions.upsert"];
+        post?: never;
+        /** DELETE /api/v1/modalities/{modality}/question — soft delete; 204 */
+        delete: operations["modalityQuestions.destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -860,6 +880,7 @@ export interface components {
             name: string;
             type: string;
             modality_id: number | null;
+            category_group_id: string | null;
             sex: string | null;
             age_min: number | null;
             age_max: number | null;
@@ -1061,6 +1082,19 @@ export interface components {
          * @enum {string}
          */
         LegalDiscountType: "pcd" | "student" | "senior";
+        /** ModalityQuestionResource */
+        ModalityQuestionResource: {
+            id: number;
+            modality_id: number;
+            label: string;
+            type: string;
+            options: unknown[] | null;
+            help_text: string | null;
+            is_active: boolean;
+            sort_order: number;
+            created_at: string;
+            updated_at: string;
+        };
         /** ModalityResource */
         ModalityResource: {
             id: number;
@@ -1158,6 +1192,11 @@ export interface components {
             sem_classificacao: boolean;
             status: string;
             results_status: string;
+            modalities?: {
+                id: number;
+                name: string;
+                is_default: boolean;
+            }[];
             categories?: components["schemas"]["CategoryResource"][];
             prize_rules?: components["schemas"]["PrizeRuleResource"][];
             categories_count?: string;
@@ -1366,6 +1405,7 @@ export interface components {
         StoreCategoryRequest: {
             name: string;
             type?: string | null;
+            /** @description Atalho retrocompat (1 linha). Pra fan-out por modalidade, use modality_ids. */
             modality_id?: number | null;
             /** @enum {string|null} */
             sex?: "M" | "F" | null;
@@ -1376,6 +1416,8 @@ export interface components {
             is_team?: boolean | null;
             sort_order?: number | null;
             status?: components["schemas"]["CommonStatus"];
+            /** @description Materializa 1 categoria por modalidade marcada (subconjunto das da prova). */
+            modality_ids?: number[] | null;
         };
         /**
          * StoreCheckpointRequest
@@ -1464,6 +1506,14 @@ export interface components {
             sort_order?: number | null;
         };
         /**
+         * StoreModalityRequest
+         * @description POST /api/v1/modalities — cria uma modalidade do hub (reutilizável).
+         *     Globais (hub_id NULL) são read-only; esta rota cria sempre no hub autenticado.
+         */
+        StoreModalityRequest: {
+            name: string;
+        };
+        /**
          * StoreOrganizerRequest
          * @description Criação de organizador GLOBAL via Management API (Domínio 0).
          *     Espelha a validação do quick-create em Hub/Events/EventCreate::saveCreateOrganizer.
@@ -1512,10 +1562,7 @@ export interface components {
         StoreRaceRequest: {
             name: string;
             code?: string | null;
-            /**
-             * @description OBS: prova NÃO tem modalidade no schema atual — races.modality_id foi
-             *     dropado (migration 2026_04_28_000004). Modalidade vive em categories/registrations.
-             */
+            default_modality_id?: number | null;
             distance?: number | null;
             distance_label?: string | null;
             sort_order?: number | null;
@@ -1530,6 +1577,11 @@ export interface components {
             status?: components["schemas"]["CommonStatus"];
             /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
             sem_classificacao?: boolean | null;
+            /**
+             * @description Conjunto de modalidades da prova (PRD modalidade-nível-prova).
+             *     Sincroniza race_modalities; default_modality_id marca a "pura" (Geral).
+             */
+            modality_ids?: number[] | null;
         };
         /**
          * StoreRegistrationFieldRequest
@@ -1615,6 +1667,8 @@ export interface components {
             is_team?: boolean;
             sort_order?: number | null;
             status?: components["schemas"]["CommonStatus"];
+            /** @description Reconcilia as irmãs do grupo desta categoria (propaga attrs + ajusta modalidades). */
+            modality_ids?: number[];
         };
         /**
          * UpdateCheckpointRequest
@@ -1735,6 +1789,7 @@ export interface components {
          */
         UpdateRaceRequest: {
             name?: string;
+            default_modality_id?: number | null;
             distance?: number | null;
             distance_label?: string | null;
             sort_order?: number | null;
@@ -1750,6 +1805,11 @@ export interface components {
             /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
             sem_classificacao?: boolean;
             results_status?: components["schemas"]["RaceResultsStatus"];
+            /**
+             * @description Conjunto de modalidades da prova (sync race_modalities). Remoção é
+             *     guardada: modalidade com inscrições/resultados → 409.
+             */
+            modality_ids?: number[];
         };
         /**
          * UpdateRegistrationFieldRequest
@@ -1803,6 +1863,22 @@ export interface components {
                 anchor: components["schemas"]["ReleaseAnchor"];
                 offset_days: number;
             }[];
+        };
+        /**
+         * UpsertModalityQuestionRequest
+         * @description PUT /api/v1/modalities/{modality}/question — cria/atualiza a pergunta de opt-in
+         *     do hub autenticado pra aquela modalidade (1 por (hub, modalidade)).
+         *
+         *     `options` é obrigatória quando o tipo exige lista (select/multiselect),
+         *     espelhando RegistrationFieldType::requiresOptions().
+         */
+        UpsertModalityQuestionRequest: {
+            label: string;
+            type: components["schemas"]["RegistrationFieldType"];
+            options?: string[] | null;
+            help_text?: string | null;
+            is_active?: boolean | null;
+            sort_order?: number | null;
         };
     };
     responses: {
@@ -2484,7 +2560,12 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["CategoryResource"];
+                        data: components["schemas"]["JsonResource"];
+                    } | {
+                        data: {
+                            category_group_id: string;
+                            categories: components["schemas"]["CategoryResource"][];
+                        };
                     };
                 };
             };
@@ -2626,7 +2707,12 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        data: components["schemas"]["CategoryResource"];
+                        data: components["schemas"]["JsonResource"];
+                    } | {
+                        data: {
+                            category_group_id: string;
+                            categories: components["schemas"]["CategoryResource"][];
+                        };
                     };
                 };
             };
@@ -4728,6 +4814,268 @@ export interface operations {
             };
             /** @description A API key não tem o escopo `manage`. */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "modalities.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreModalityRequest"];
+            };
+        };
+        responses: {
+            /** @description `JsonResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ModalityResource"];
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "modalityQuestions.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modality: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `JsonResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ModalityQuestionResource"];
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "modalityQuestions.upsert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modality: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpsertModalityQuestionRequest"];
+            };
+        };
+        responses: {
+            /** @description `JsonResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ModalityQuestionResource"];
+                    };
+                };
+            };
+            /** @description `JsonResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ModalityQuestionResource"];
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "modalityQuestions.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                modality: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
