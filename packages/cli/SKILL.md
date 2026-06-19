@@ -1,6 +1,6 @@
 ---
 name: eventor
-description: Configura eventos de corrida na plataforma Eventor de ponta a ponta (criar, precificar, publicar) via o CLI `eventor`. Use quando precisar criar/editar/publicar um evento, lotes, provas, categorias, cupons ou ler/apagar inscrições e resultados de um hub.
+description: Configura eventos de corrida na plataforma Eventor de ponta a ponta (criar, precificar, publicar) via o CLI `eventor`. Use quando precisar criar/editar/publicar um evento, lotes, provas, categorias, cupons, importar resultados/inscrições/laps em lote, ou ler/apagar inscrições e resultados de um hub.
 ---
 
 # Eventor — CLI headless para configurar eventos
@@ -101,6 +101,10 @@ eventor event show --event MAR2026 --json     # read-back pra conferir
 | organizadores / vendedores | `eventor organizer list\|create` · `eventor salesperson list\|create` |
 | inscrições: listar / apagar uma / limpar em lote | `eventor registration list\|delete\|clear --event <code>` |
 | resultados: listar / apagar / limpar prova ou evento | `eventor result list\|delete\|clear --event <code>` |
+| **importar** resultados em lote (cronometragem) | `eventor result import --event <code> --race <id\|code> --from results.json` |
+| **importar** inscrições em lote | `eventor registration import --event <code> --race <id\|code> --from inscritos.json` |
+| **importar** parciais por volta (laps) | `eventor lap import --event <code> --race <id\|code> --from laps.json` |
+| status/sumário de um import | `eventor result import-status <id> --event <code>` · `eventor registration import-status <id> --event <code>` |
 | homologar / voltar pra provisório uma prova | `eventor result status homologated\|provisional --event <code> --race <id>` |
 | qualquer endpoint do spec | `eventor api <METHOD> <path>` |
 
@@ -121,6 +125,50 @@ eventor api DELETE /events/MAR2026/batches/5 --yes     # destrutivo exige --yes
 ```
 
 Tolera o path: `/events`, `/v1/events` e a URL completa funcionam igual.
+
+## Importar resultados e inscrições em lote (ingest pós-prova)
+
+A ingestão de dados de cronometragem vive na **Management API `/api/v1`** — os antigos
+endpoints `POST /api/integrations/*` foram **removidos**. Evento e prova vão na **URL**
+(aceitam id ou code) e a key precisa do escopo **`manage`**. Você dá um arquivo JSON e o
+CLI lê do disco — nada de montar payload na mão.
+
+```bash
+# resultados — UMA modalidade por envio (ex.: sobe "Geral", depois "Morador")
+eventor result import --event 260412 --race 26041201 --from geral.json
+eventor result import --event 260412 --race 26041201 --modality Morador --from morador.json
+
+# inscrições
+eventor registration import --event 260401 --race 26040101 --from inscritos.json
+
+# parciais por volta (laps) — stream-friendly, pode mandar durante a corrida
+eventor lap import --event 260412 --race 26041201 --from laps.json
+
+# status/sumário de um import (o import_id vem no retorno do import)
+eventor result import-status 57 --event 260412
+eventor registration import-status 42 --event 260401
+```
+
+**Formato do `--from`:** aceita o **corpo completo** (`{"modality":"Geral","results":[...]}`,
+`{"registrations":[...]}`, `{"laps":[...]}`) **ou um array puro** dos itens; use `-` pra ler
+do stdin. Pra resultados, `--modality <nome>`/`--modality-id <id>` define a modalidade do
+lote (sobrescreve a do arquivo; id ganha de nome). A modalidade é resolvida contra as
+**declaradas na prova** — nunca é criada; categoria sim, é auto-criada.
+
+**Match de resultados por chave natural:** o upsert casa por `(prova, categoria, bib)`; sem
+bib, cai pro CPF; sem identidade, cria linha nova. **`external_id` é só referência livre —
+NÃO é chave de idempotência** (reusar o mesmo `external_id` não colapsa linhas; cada bib é
+uma linha). Inscrições casam por `(evento, external_id)` ou, sem ele, `(evento, CPF)`.
+
+**Re-import é seguro (preserve-on-absent):** reenviar a lista atualiza em vez de duplicar, e
+campos **omitidos** preservam o valor atual (protege edição manual do admin). Pode mandar a
+lista completa todo dia.
+
+**Saída e limites:** o retorno traz `summary` (`created`/`updated`/`conflicts`/`errors`) e um
+`outcome` por item (`created`/`updated`/`conflict`/`error`). Import é **upsert, não
+destrutivo** → não exige `--yes`. Se algum item falha a validação, a API devolve 422 (exit 1,
+veja `code`/`message` no stderr). Limites: resultados 1–5000/req, inscrições 1–2000/req — pra
+cargas maiores, fatie em vários arquivos.
 
 ## Apagar inscrições e resultados (destrutivo — exige `--yes`)
 

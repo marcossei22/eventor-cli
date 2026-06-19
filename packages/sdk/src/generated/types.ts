@@ -409,6 +409,22 @@ export interface paths {
         patch: operations["finishVideos.update"];
         trace?: never;
     };
+    "/events/{event}/races/{race}/laps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["laps.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events/{event}/legal-discounts": {
         parameters: {
             query?: never;
@@ -677,6 +693,22 @@ export interface paths {
         patch: operations["registrationFields.update"];
         trace?: never;
     };
+    "/events/{event}/registration-imports/{import}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["registrationImports.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events/{event}/registration-settings": {
         parameters: {
             query?: never;
@@ -738,6 +770,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/{event}/races/{race}/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /api/v1/events/{event}/races/{race}/registrations — ingest em lote
+         * @description Idempotência por (evento, external_id) ou (evento, CPF) — ver
+         *     RegistrationImporter. Evento e prova vêm na URL (id|code).
+         */
+        post: operations["registrations.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events/{event}/result-imports/{import}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["resultImports.show"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/events/{event}/results": {
         parameters: {
             query?: never;
@@ -791,7 +860,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post?: never;
+        /**
+         * POST /api/v1/events/{event}/races/{race}/results — ingest em lote
+         * @description Idempotente pela chave natural do cronometrista (bib → atleta); ver
+         *     ResultImporter. Evento e prova vêm na URL (id|code).
+         */
+        post: operations["results.store"];
         /**
          * DELETE /api/v1/events/{event}/races/{race}/results
          * @description Limpa TODOS os resultados da prova (inclusive trashed) — desfaz um
@@ -1285,6 +1359,12 @@ export interface components {
             updated_at: string;
         };
         /**
+         * RegistrationStatus
+         * @description Status da inscrição (desacoplado de pagamento — Fase 4). Confirmed = inscrição válida, corredor vai correr. Canceled  = desistência / cancelamento.  Nota: pagamento (estados "pending"/"refunded") foi adiado pra V2 junto da integração Pagar.me. A inscrição chega aqui via API externa e assume-se que o integrador só envia quando a inscrição está confirmada.
+         * @enum {string}
+         */
+        RegistrationStatus: "confirmed" | "canceled";
+        /**
          * ReleaseAnchor
          * @description Âncora de uma regra de retenção (Fase 02 / F2). - Payment → conta a partir de payments.paid_at  - Event   → conta a partir de events.date (dia da prova)
          * @enum {string}
@@ -1292,16 +1372,27 @@ export interface components {
         ReleaseAnchor: "payment" | "event";
         /** ResultResource */
         ResultResource: {
+            /**
+             * @description `id` = id interno da Eventor; `external_id` = referência LIVRE do
+             *     cronometrista (o que ele mandou no import; não é chave de match).
+             */
             id: number;
+            external_id: string | null;
             registration_id: number | null;
             name: string | null;
             bib: string | null;
+            event_id: number;
             race_id: number;
             category_id: number;
+            /** @description Modalidade vem da categoria (results não tem coluna própria). */
+            modality_id: string;
+            modality_name: string;
             athlete_id: number | null;
             status: string;
             net_time: string | null;
             gun_time: string | null;
+            start_time: string;
+            finish_time: string;
             overall_position: number | null;
             category_position: number | null;
             gender_position: number | null;
@@ -1310,10 +1401,19 @@ export interface components {
             lap_count: number | null;
             total_distance: string | null;
             observation: string | null;
+            import_source: string | null;
+            last_imported_at: string;
+            match_conflict_data: unknown[] | null;
+            external_data: unknown[] | null;
             published_at: string;
             created_at: string;
             updated_at: string;
         };
+        /**
+         * ResultStatus
+         * @enum {string}
+         */
+        ResultStatus: "finished" | "dnf" | "dns" | "dq";
         /** RetentionPolicyResource */
         RetentionPolicyResource: {
             id: number;
@@ -1473,9 +1573,8 @@ export interface components {
         };
         /**
          * StoreEventRequest
-         * @description POST /api/v1/events — criação rica de evento (Management API).
-         *     Diferente do POST /api/integrations/events (carga), aceita organizador,
-         *     vendedor e demais campos comerciais.
+         * @description POST /api/v1/events — criação rica de evento (Management API): aceita
+         *     organizador, vendedor e demais campos comerciais.
          */
         StoreEventRequest: {
             name: string;
@@ -1504,6 +1603,31 @@ export interface components {
             ref_result_id?: number | null;
             ref_seconds?: number | null;
             sort_order?: number | null;
+        };
+        /**
+         * StoreLapsRequest
+         * @description Ingest de voltas (parciais) via Management API —
+         *     POST /api/v1/events/{event}/races/{race}/laps.
+         *
+         *     Evento e prova vêm na URL; o corpo é só o array de voltas.
+         */
+        StoreLapsRequest: {
+            laps: {
+                external_id?: string | null;
+                athlete: {
+                    document?: string | null;
+                    /** Format: email */
+                    email?: string | null;
+                    name?: string | null;
+                };
+                lap_number: number;
+                /** Format: date-time */
+                passed_at?: string | null;
+                partial_time?: string | null;
+                accumulated_time?: string | null;
+                pace?: string | null;
+                distance?: number | null;
+            }[];
         };
         /**
          * StoreModalityRequest
@@ -1602,6 +1726,85 @@ export interface components {
                 value?: string;
                 label?: string;
             }[] | null;
+        };
+        /**
+         * StoreRegistrationsRequest
+         * @description Ingest de inscrições via Management API —
+         *     POST /api/v1/events/{event}/races/{race}/registrations.
+         *
+         *     Evento e prova vêm na URL; o corpo é só o array de inscrições (até 2000).
+         */
+        StoreRegistrationsRequest: {
+            registrations: {
+                external_id?: string | null;
+                name: string;
+                document?: string | null;
+                /** Format: email */
+                email?: string | null;
+                phone?: string | null;
+                /** Format: date */
+                birth_date?: string | null;
+                /** @enum {string|null} */
+                sex?: "M" | "F" | "O" | null;
+                bib?: string | null;
+                category?: string | null;
+                modality?: string | null;
+                status?: components["schemas"]["RegistrationStatus"];
+                kit_picked_up?: boolean | null;
+                kit_qr_payload?: string | null;
+                /** Format: uri */
+                medrace_link?: string | null;
+                /** @enum {string|null} */
+                medrace_atestado_status?: "P" | "A" | "R" | null;
+            }[];
+        };
+        /**
+         * StoreResultsRequest
+         * @description Ingest de resultados via Management API — POST /api/v1/events/{event}/races/{race}/results.
+         *
+         *     Evento e prova vêm na URL (resolvidos por id|code no controller); o corpo é só
+         *     a modalidade do lote + o array de resultados.
+         */
+        StoreResultsRequest: {
+            /**
+             * @description Modalidade do LOTE (id OU nome; id ganha). Vale pra todos os
+             *     resultados, salvo override no item. Resolvida contra modalidades
+             *     existentes — nunca cria.
+             */
+            modality_id?: number | null;
+            modality?: string | null;
+            results: {
+                /** @description Referência livre do cronometrista — NÃO é chave de match. */
+                external_id?: string | null;
+                athlete: {
+                    name?: string | null;
+                    document?: string | null;
+                    /** Format: email */
+                    email?: string | null;
+                    /** Format: date */
+                    birth_date?: string | null;
+                    /** @enum {string|null} */
+                    sex?: "M" | "F" | "O" | null;
+                };
+                /**
+                 * @description Categoria por nome OU id (id ganha). category é obrigatório só quando
+                 *     category_id não vem. Nome é resolvido DENTRO da modalidade efetiva
+                 *     (categoria é modality-specific) e auto-criado se não existir.
+                 */
+                category?: string | null;
+                category_id?: number | null;
+                /** @description Modalidade no nível do ATLETA (override do lote). id OU nome; id ganha. */
+                modality_id?: number | null;
+                modality?: string | null;
+                bib?: string | null;
+                net_time?: string | null;
+                gun_time?: string | null;
+                overall_position?: number | null;
+                category_position?: number | null;
+                gender_position?: number | null;
+                status?: components["schemas"]["ResultStatus"];
+                observation?: string | null;
+            }[];
         };
         /**
          * StoreSalespersonRequest
@@ -4583,6 +4786,77 @@ export interface operations {
             };
         };
     };
+    "laps.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                race: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreLapsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "legalDiscounts.index": {
         parameters: {
             query?: never;
@@ -6008,6 +6282,70 @@ export interface operations {
             };
         };
     };
+    "registrationImports.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                import: string | number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        import_id: number;
+                        event_code: string;
+                        status: string;
+                        source: string;
+                        summary: {
+                            total_received: number;
+                            created: number;
+                            updated: number;
+                            conflicts: number;
+                            errors: number;
+                            duration_ms: number;
+                        };
+                        started_at: string;
+                        finished_at: string;
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "registrationSettings.update": {
         parameters: {
             query?: never;
@@ -6284,6 +6622,143 @@ export interface operations {
             };
         };
     };
+    "registrations.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                race: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreRegistrationsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "resultImports.show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                import: string | number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        import_id: number;
+                        event_code: string;
+                        race_code: string;
+                        kind: string;
+                        source: string | null;
+                        status: string;
+                        summary: {
+                            total_received: number;
+                            created: number;
+                            updated: number;
+                            conflicts: number;
+                            errors: number;
+                            duration_ms: number;
+                        };
+                        started_at: string;
+                        finished_at: string;
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "results.index": {
         parameters: {
             query?: {
@@ -6436,6 +6911,77 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "results.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                race: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreResultsRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
             };
             /** @description API key ausente ou inválida. */
             401: {

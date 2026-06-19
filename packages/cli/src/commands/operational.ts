@@ -18,8 +18,11 @@ type OperationalFlags = GlobalFlags & {
  * Domínio 5 — leitura operacional + limpeza. Inscrições e resultados de um
  * evento: list pros dois, delete pontual e (resultados) clear da prova inteira
  * pra desfazer import errado antes de reimportar.
+ *
+ * Devolve os grupos `result`/`registration` pra que o ingest (Domínio 6) pendure
+ * neles os subcomandos de upload (`import`, `import-status`) sem recriar o grupo.
  */
-export function registerOperational(program: Command, deps: CliDeps): void {
+export function registerOperational(program: Command, deps: CliDeps): { result: Command; registration: Command } {
   const ctxOf = (command: Command) => new CliContext(command.optsWithGlobals() as OperationalFlags, deps);
   const flagsOf = (command: Command) => command.optsWithGlobals() as OperationalFlags;
 
@@ -187,6 +190,8 @@ export function registerOperational(program: Command, deps: CliDeps): void {
         }),
       );
     });
+
+  return { result, registration };
 }
 
 function requireEvent(flags: OperationalFlags): string {

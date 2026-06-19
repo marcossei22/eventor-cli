@@ -3956,6 +3956,104 @@
                 }
             }
         },
+        "/events/{event}/races/{race}/laps": {
+            "post": {
+                "operationId": "laps.store",
+                "tags": [
+                    "Laps"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "race",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreLapsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/events/{event}/legal-discounts": {
             "get": {
                 "operationId": "legalDiscounts.index",
@@ -6102,6 +6200,141 @@
                 }
             }
         },
+        "/events/{event}/registration-imports/{import}": {
+            "get": {
+                "operationId": "registrationImports.show",
+                "tags": [
+                    "RegistrationImports"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "import",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import_id": {
+                                            "type": "integer"
+                                        },
+                                        "event_code": {
+                                            "type": "string"
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        },
+                                        "source": {
+                                            "type": "string"
+                                        },
+                                        "summary": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total_received": {
+                                                    "type": "integer"
+                                                },
+                                                "created": {
+                                                    "type": "integer"
+                                                },
+                                                "updated": {
+                                                    "type": "integer"
+                                                },
+                                                "conflicts": {
+                                                    "type": "integer"
+                                                },
+                                                "errors": {
+                                                    "type": "integer"
+                                                },
+                                                "duration_ms": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "total_received",
+                                                "created",
+                                                "updated",
+                                                "conflicts",
+                                                "errors",
+                                                "duration_ms"
+                                            ]
+                                        },
+                                        "started_at": {
+                                            "type": "string"
+                                        },
+                                        "finished_at": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "import_id",
+                                        "event_code",
+                                        "status",
+                                        "source",
+                                        "summary",
+                                        "started_at",
+                                        "finished_at"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/events/{event}/registration-settings": {
             "put": {
                 "operationId": "registrationSettings.update",
@@ -6541,6 +6774,252 @@
                 }
             }
         },
+        "/events/{event}/races/{race}/registrations": {
+            "post": {
+                "operationId": "registrations.store",
+                "description": "Idempot\u00eancia por (evento, external_id) ou (evento, CPF) \u2014 ver\nRegistrationImporter. Evento e prova v\u00eam na URL (id|code).",
+                "summary": "POST /api/v1/events/{event}/races/{race}/registrations \u2014 ingest em lote",
+                "tags": [
+                    "Registrations"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "race",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreRegistrationsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{event}/result-imports/{import}": {
+            "get": {
+                "operationId": "resultImports.show",
+                "tags": [
+                    "ResultImports"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "import",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "import_id": {
+                                            "type": "integer"
+                                        },
+                                        "event_code": {
+                                            "type": "string"
+                                        },
+                                        "race_code": {
+                                            "type": "string"
+                                        },
+                                        "kind": {
+                                            "type": "string"
+                                        },
+                                        "source": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "status": {
+                                            "type": "string"
+                                        },
+                                        "summary": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total_received": {
+                                                    "type": "integer"
+                                                },
+                                                "created": {
+                                                    "type": "integer"
+                                                },
+                                                "updated": {
+                                                    "type": "integer"
+                                                },
+                                                "conflicts": {
+                                                    "type": "integer"
+                                                },
+                                                "errors": {
+                                                    "type": "integer"
+                                                },
+                                                "duration_ms": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "total_received",
+                                                "created",
+                                                "updated",
+                                                "conflicts",
+                                                "errors",
+                                                "duration_ms"
+                                            ]
+                                        },
+                                        "started_at": {
+                                            "type": "string"
+                                        },
+                                        "finished_at": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "import_id",
+                                        "event_code",
+                                        "race_code",
+                                        "kind",
+                                        "source",
+                                        "status",
+                                        "summary",
+                                        "started_at",
+                                        "finished_at"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/events/{event}/results": {
             "get": {
                 "operationId": "results.index",
@@ -6960,6 +7439,104 @@
                     },
                     "422": {
                         "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "results.store",
+                "description": "Idempotente pela chave natural do cronometrista (bib \u2192 atleta); ver\nResultImporter. Evento e prova v\u00eam na URL (id|code).",
+                "summary": "POST /api/v1/events/{event}/races/{race}/results \u2014 ingest em lote",
+                "tags": [
+                    "Results"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "race",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreResultsRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -9291,6 +9868,15 @@
                 ],
                 "title": "RegistrationResource"
             },
+            "RegistrationStatus": {
+                "type": "string",
+                "description": "Status da inscri\u00e7\u00e3o (desacoplado de pagamento \u2014 Fase 4). Confirmed = inscri\u00e7\u00e3o v\u00e1lida, corredor vai correr. Canceled  = desist\u00eancia / cancelamento.  Nota: pagamento (estados \"pending\"/\"refunded\") foi adiado pra V2 junto da integra\u00e7\u00e3o Pagar.me. A inscri\u00e7\u00e3o chega aqui via API externa e assume-se que o integrador s\u00f3 envia quando a inscri\u00e7\u00e3o est\u00e1 confirmada.\n",
+                "enum": [
+                    "confirmed",
+                    "canceled"
+                ],
+                "title": "RegistrationStatus"
+            },
             "ReleaseAnchor": {
                 "type": "string",
                 "description": "\u00c2ncora de uma regra de reten\u00e7\u00e3o (Fase 02 / F2). - Payment \u2192 conta a partir de payments.paid_at  - Event   \u2192 conta a partir de events.date (dia da prova)\n",
@@ -9304,7 +9890,14 @@
                 "type": "object",
                 "properties": {
                     "id": {
-                        "type": "integer"
+                        "type": "integer",
+                        "description": "`id` = id interno da Eventor; `external_id` = refer\u00eancia LIVRE do\ncronometrista (o que ele mandou no import; n\u00e3o \u00e9 chave de match)."
+                    },
+                    "external_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "registration_id": {
                         "type": [
@@ -9324,11 +9917,21 @@
                             "null"
                         ]
                     },
+                    "event_id": {
+                        "type": "integer"
+                    },
                     "race_id": {
                         "type": "integer"
                     },
                     "category_id": {
                         "type": "integer"
+                    },
+                    "modality_id": {
+                        "type": "string",
+                        "description": "Modalidade vem da categoria (results n\u00e3o tem coluna pr\u00f3pria)."
+                    },
+                    "modality_name": {
+                        "type": "string"
                     },
                     "athlete_id": {
                         "type": [
@@ -9350,6 +9953,12 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "start_time": {
+                        "type": "string"
+                    },
+                    "finish_time": {
+                        "type": "string"
                     },
                     "overall_position": {
                         "type": [
@@ -9399,6 +10008,29 @@
                             "null"
                         ]
                     },
+                    "import_source": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_imported_at": {
+                        "type": "string"
+                    },
+                    "match_conflict_data": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "external_data": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
                     "published_at": {
                         "type": "string"
                     },
@@ -9411,15 +10043,21 @@
                 },
                 "required": [
                     "id",
+                    "external_id",
                     "registration_id",
                     "name",
                     "bib",
+                    "event_id",
                     "race_id",
                     "category_id",
+                    "modality_id",
+                    "modality_name",
                     "athlete_id",
                     "status",
                     "net_time",
                     "gun_time",
+                    "start_time",
+                    "finish_time",
                     "overall_position",
                     "category_position",
                     "gender_position",
@@ -9428,11 +10066,25 @@
                     "lap_count",
                     "total_distance",
                     "observation",
+                    "import_source",
+                    "last_imported_at",
+                    "match_conflict_data",
+                    "external_data",
                     "published_at",
                     "created_at",
                     "updated_at"
                 ],
                 "title": "ResultResource"
+            },
+            "ResultStatus": {
+                "type": "string",
+                "enum": [
+                    "finished",
+                    "dnf",
+                    "dns",
+                    "dq"
+                ],
+                "title": "ResultStatus"
             },
             "RetentionPolicyResource": {
                 "type": "object",
@@ -9982,7 +10634,7 @@
             },
             "StoreEventRequest": {
                 "type": "object",
-                "description": "POST /api/v1/events \u2014 cria\u00e7\u00e3o rica de evento (Management API).\nDiferente do POST /api/integrations/events (carga), aceita organizador,\nvendedor e demais campos comerciais.",
+                "description": "POST /api/v1/events \u2014 cria\u00e7\u00e3o rica de evento (Management API): aceita\norganizador, vendedor e demais campos comerciais.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -10099,6 +10751,102 @@
                     "url"
                 ],
                 "title": "StoreFinishVideoRequest"
+            },
+            "StoreLapsRequest": {
+                "type": "object",
+                "description": "Ingest de voltas (parciais) via Management API \u2014\nPOST /api/v1/events/{event}/races/{race}/laps.\n\nEvento e prova v\u00eam na URL; o corpo \u00e9 s\u00f3 o array de voltas.",
+                "properties": {
+                    "laps": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "external_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 100
+                                },
+                                "athlete": {
+                                    "type": "object",
+                                    "properties": {
+                                        "document": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "maxLength": 20
+                                        },
+                                        "email": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "format": "email",
+                                            "maxLength": 150
+                                        },
+                                        "name": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "maxLength": 120
+                                        }
+                                    }
+                                },
+                                "lap_number": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                },
+                                "passed_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "date-time"
+                                },
+                                "partial_time": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "accumulated_time": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "pace": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "distance": {
+                                    "type": [
+                                        "number",
+                                        "null"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "athlete",
+                                "lap_number"
+                            ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 5000
+                    }
+                },
+                "required": [
+                    "laps"
+                ],
+                "title": "StoreLapsRequest"
             },
             "StoreModalityRequest": {
                 "type": "object",
@@ -10452,6 +11200,306 @@
                     "type"
                 ],
                 "title": "StoreRegistrationFieldRequest"
+            },
+            "StoreRegistrationsRequest": {
+                "type": "object",
+                "description": "Ingest de inscri\u00e7\u00f5es via Management API \u2014\nPOST /api/v1/events/{event}/races/{race}/registrations.\n\nEvento e prova v\u00eam na URL; o corpo \u00e9 s\u00f3 o array de inscri\u00e7\u00f5es (at\u00e9 2000).",
+                "properties": {
+                    "registrations": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "external_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 100
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "maxLength": 120
+                                },
+                                "document": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "email": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "email",
+                                    "maxLength": 150
+                                },
+                                "phone": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "birth_date": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "date"
+                                },
+                                "sex": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "enum": [
+                                        "M",
+                                        "F",
+                                        "O"
+                                    ]
+                                },
+                                "bib": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 10
+                                },
+                                "category": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 60
+                                },
+                                "modality": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 80
+                                },
+                                "status": {
+                                    "$ref": "#/components/schemas/RegistrationStatus"
+                                },
+                                "kit_picked_up": {
+                                    "type": [
+                                        "boolean",
+                                        "null"
+                                    ]
+                                },
+                                "kit_qr_payload": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 255
+                                },
+                                "medrace_link": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "uri",
+                                    "maxLength": 255
+                                },
+                                "medrace_atestado_status": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "enum": [
+                                        "P",
+                                        "A",
+                                        "R"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "name"
+                            ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 2000
+                    }
+                },
+                "required": [
+                    "registrations"
+                ],
+                "title": "StoreRegistrationsRequest"
+            },
+            "StoreResultsRequest": {
+                "type": "object",
+                "description": "Ingest de resultados via Management API \u2014 POST /api/v1/events/{event}/races/{race}/results.\n\nEvento e prova v\u00eam na URL (resolvidos por id|code no controller); o corpo \u00e9 s\u00f3\na modalidade do lote + o array de resultados.",
+                "properties": {
+                    "modality_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Modalidade do LOTE (id OU nome; id ganha). Vale pra todos os\nresultados, salvo override no item. Resolvida contra modalidades\nexistentes \u2014 nunca cria."
+                    },
+                    "modality": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 80
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "external_id": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "description": "Refer\u00eancia livre do cronometrista \u2014 N\u00c3O \u00e9 chave de match.",
+                                    "maxLength": 100
+                                },
+                                "athlete": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "maxLength": 120
+                                        },
+                                        "document": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "maxLength": 20
+                                        },
+                                        "email": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "format": "email",
+                                            "maxLength": 150
+                                        },
+                                        "birth_date": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "format": "date"
+                                        },
+                                        "sex": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "enum": [
+                                                "M",
+                                                "F",
+                                                "O"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "category": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "description": "Categoria por nome OU id (id ganha). category \u00e9 obrigat\u00f3rio s\u00f3 quando\ncategory_id n\u00e3o vem. Nome \u00e9 resolvido DENTRO da modalidade efetiva\n(categoria \u00e9 modality-specific) e auto-criado se n\u00e3o existir.",
+                                    "maxLength": 80
+                                },
+                                "category_id": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ]
+                                },
+                                "modality_id": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "description": "Modalidade no n\u00edvel do ATLETA (override do lote). id OU nome; id ganha."
+                                },
+                                "modality": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 80
+                                },
+                                "bib": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 10
+                                },
+                                "net_time": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "gun_time": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 20
+                                },
+                                "overall_position": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0
+                                },
+                                "category_position": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0
+                                },
+                                "gender_position": {
+                                    "type": [
+                                        "integer",
+                                        "null"
+                                    ],
+                                    "minimum": 0
+                                },
+                                "status": {
+                                    "$ref": "#/components/schemas/ResultStatus"
+                                },
+                                "observation": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 255
+                                }
+                            },
+                            "required": [
+                                "athlete"
+                            ]
+                        },
+                        "minItems": 1,
+                        "maxItems": 5000
+                    }
+                },
+                "required": [
+                    "results"
+                ],
+                "title": "StoreResultsRequest"
             },
             "StoreSalespersonRequest": {
                 "type": "object",
