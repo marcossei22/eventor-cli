@@ -4,6 +4,7 @@ import { registerApi } from './commands/api.js';
 import { registerAuth } from './commands/auth.js';
 import { registerDiscovery } from './commands/discovery.js';
 import { registerEvent } from './commands/event.js';
+import { registerIngest } from './commands/ingest.js';
 import { registerOperational } from './commands/operational.js';
 import { registerSetup } from './commands/setup.js';
 import { registerSkill } from './commands/skill.js';
@@ -34,7 +35,8 @@ export function buildProgram(deps: CliDeps): Command {
   registerApi(program, deps);
   const eventCmd = registerEvent(program, deps);
   registerDiscovery(program, deps);
-  registerOperational(program, deps);
+  const operational = registerOperational(program, deps);
+  registerIngest({ program, ...operational }, deps); // upload `import` nos grupos result/registration + grupo lap
   registerSetup(eventCmd, deps); // `eventor event setup`
   registerSkill(program, deps);
 
