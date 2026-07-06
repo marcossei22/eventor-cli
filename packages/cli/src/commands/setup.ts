@@ -21,12 +21,24 @@ interface EventSpec {
     }
   >;
   registration_settings?: Record<string, unknown>;
-  batches?: Array<Record<string, unknown> & { name: string; race_prices?: Record<string, number> }>;
+  // Pacotes de vagas (ADR #19) — baldes de capacidade reutilizáveis; referenciados por
+  // NOME em batches[].race_prices[].pool. O CLI resolve/cria (POST /vacancy-pools) → pool_id.
+  vacancy_pools?: Array<{ name: string; max_quantity: number }>;
+  batches?: Array<Record<string, unknown> & { name: string; race_prices?: RacePricesSpec }>;
   registration_fields?: Array<Record<string, unknown> & { label: string }>;
   // Pergunta de opt-in por modalidade (nível hub) — quem responder no checkout entra na modalidade.
   modality_questions?: Array<{ modality: string; label: string; type?: string; options?: unknown }>;
   publish?: boolean;
 }
+
+/**
+ * race_prices por NOME da prova (PRD §7.1 + ADR #19). Cada prova mapeia pra:
+ *  - um número (centavos) — atalho legado, sem pacote de vagas (ilimitado), ou
+ *  - { price, pool? } — preço + nome do pacote de vagas que cobre esse par.
+ * O CLI resolve prova→race_id e pacote→pool_id antes de enviar.
+ */
+type RacePriceSpec = number | { price: number; pool?: string };
+type RacePricesSpec = Record<string, RacePriceSpec>;
 
 type Action = 'created' | 'updated' | 'unchanged' | 'would_create' | 'would_update';
 interface PlanEntry {
@@ -44,8 +56,12 @@ export function registerSetup(parent: Command, deps: CliDeps): void {
       'after',
       `
 spec.json descreve event + organizer + races(+categorias) + registration_settings
-+ batches + registration_fields + publish. Em batches, race_prices usa o NOME da
-prova (ex.: {"10K": 12900}, em centavos) — o CLI resolve pra race_id.
++ vacancy_pools + batches + registration_fields + publish. Em batches, race_prices
+usa o NOME da prova (ex.: {"10K": 12900}, em centavos) — o CLI resolve pra race_id.
+Pra limitar vagas, declare pacotes em "vacancy_pools" e referencie por nome:
+  "vacancy_pools": [{ "name": "Geral", "max_quantity": 500 }],
+  "batches": [{ "name": "1º Lote",
+    "race_prices": { "10K": { "price": 12900, "pool": "Geral" } } }]
 
 Exemplos:
   $ eventor event setup --from spec.json --dry-run   # plano, sem escrever
@@ -98,6 +114,9 @@ class SetupRunner {
   /** nome (lowercase) → id da modalidade (resolvido/criado em ensureModalities). */
   private readonly modalityIdByName = new Map<string, number | string>();
 
+  /** nome → id do pacote de vagas (resolvido/criado em ensureVacancyPools). */
+  private readonly poolIdByName = new Map<string, number | string>();
+
   constructor(
     private readonly client: EventorClient,
     private readonly apply: boolean,
@@ -129,6 +148,9 @@ class SetupRunner {
     if (spec.registration_settings) {
       await this.applyRegistrationSettings(eventKey, spec.registration_settings);
     }
+
+    // Pacotes de vagas antes dos lotes — batches[].race_prices[].pool referencia por nome.
+    await this.ensureVacancyPools(eventKey, spec.vacancy_pools);
 
     for (const batch of spec.batches ?? []) {
       await this.ensureBatch(eventKey, batch, raceIdByName);
@@ -351,11 +373,52 @@ class SetupRunner {
     }
   }
 
+  // ------------------------------------------------------------ vacancy pools
+
+  /** Cria/atualiza os pacotes de vagas do evento e mapeia nome → pool_id (ADR #19). */
+  private async ensureVacancyPools(eventKey: string, pools: EventSpec['vacancy_pools']): Promise<void> {
+    if (!pools?.length) return;
+
+    const existing = await this.existingEventChildren('/events/{event}/vacancy-pools', { event: eventKey });
+
+    for (const pool of pools) {
+      const found = existing.find((p) => str(p.name) === str(pool.name));
+      const action = this.decide(found, pool);
+      this.record('vacancy_pool', str(pool.name), action);
+
+      let id: number | string | undefined;
+      if (found) {
+        id = num(found.id);
+        if (this.apply && action !== 'unchanged' && id !== undefined) {
+          await this.write('PATCH', '/events/{event}/vacancy-pools/{pool}', { event: eventKey, pool: id }, pool);
+        }
+      } else if (this.apply) {
+        const created = await this.write('POST', '/events/{event}/vacancy-pools', { event: eventKey }, pool);
+        id = num((created as Envelope).data?.id);
+      } else {
+        id = `<${pool.name}>`; // placeholder dry-run (não é enviado)
+      }
+
+      if (id !== undefined) this.poolIdByName.set(pool.name, id);
+    }
+  }
+
+  private resolvePoolId(name: string): number | string {
+    const id = this.poolIdByName.get(name);
+    if (id === undefined) {
+      throw new CliUsageError(
+        `race_prices referencia o pacote de vagas "${name}", que não está em vacancy_pools.`,
+        'Declare o pacote em "vacancy_pools" (com o mesmo nome) antes de usá-lo num lote.',
+      );
+    }
+    return id;
+  }
+
   // ------------------------------------------------------------------- batch
 
   private async ensureBatch(
     eventKey: string,
-    batch: Record<string, unknown> & { name: string; race_prices?: Record<string, number> },
+    batch: Record<string, unknown> & { name: string; race_prices?: RacePricesSpec },
     raceIdByName: Map<string, number | string>,
   ): Promise<void> {
     const body = { ...batch } as Record<string, unknown>;
@@ -381,13 +444,17 @@ class SetupRunner {
     await this.write('POST', '/events/{event}/batches', { event: eventKey }, body);
   }
 
-  /** Traduz race_prices de nome-da-prova → race_id (IDs semânticos, PRD §7.1). */
+  /**
+   * Traduz race_prices de nome-da-prova → race_id e de pacote → pool_id, emitindo o
+   * shape { race_id: { price, pool_id } } que a API espera (ADR #19). O atalho legado
+   * (número = só preço) vira pool_id null (vaga ilimitada).
+   */
   private mapRacePrices(
-    prices: Record<string, number>,
+    prices: RacePricesSpec,
     raceIdByName: Map<string, number | string>,
-  ): Record<string, number> {
-    const out: Record<string, number> = {};
-    for (const [raceName, price] of Object.entries(prices)) {
+  ): Record<string, { price: number; pool_id: number | string | null }> {
+    const out: Record<string, { price: number; pool_id: number | string | null }> = {};
+    for (const [raceName, value] of Object.entries(prices)) {
       const id = raceIdByName.get(raceName);
       if (id === undefined) {
         throw new CliUsageError(
@@ -395,7 +462,9 @@ class SetupRunner {
           'Inclua a prova em "races" (com o mesmo nome) antes de precificá-la no lote.',
         );
       }
-      out[String(id)] = price;
+      const price = typeof value === 'number' ? value : value.price;
+      const pool = typeof value === 'number' ? undefined : value.pool;
+      out[String(id)] = { price, pool_id: pool !== undefined ? this.resolvePoolId(pool) : null };
     }
     return out;
   }

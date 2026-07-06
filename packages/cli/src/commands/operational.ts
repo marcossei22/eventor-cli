@@ -12,6 +12,9 @@ type OperationalFlags = GlobalFlags & {
   status?: string;
   origin?: string;
   q?: string;
+  scope?: string;
+  preview?: boolean;
+  markProcessed?: boolean;
 };
 
 /**
@@ -89,6 +92,38 @@ export function registerOperational(program: Command, deps: CliDeps): { result: 
       ctx.ensureConfirmed();
       const query = clean({ race_id: flags.race, status: flags.status, origin: flags.origin });
       emit(ctx.io, await ctx.client().api('DELETE', `/events/${encodeURIComponent(key)}/registrations`, { query }));
+    });
+
+  registration
+    .command('export')
+    .description(
+      'Exporta os inscritos confirmados para produção (Venda → Inscritos). Gera um lote com snapshot; a resposta traz download_url do XLSX. Use --preview pra ver as contagens sem gravar.',
+    )
+    .option('--event <idOrCode>', 'id ou código do evento')
+    .option('--scope <scope>', 'all (base inteira) | delta (só o que mudou desde o último lote)', 'all')
+    .option('--race <id>', 'limita a uma prova')
+    .option('--preview', 'dry-run: só reporta counts/will_export/has_previous, não gera lote')
+    .option('--mark-processed', 'marca os inscritos exportados como processados (ignorado em --preview)')
+    .action(async (_opts, command: Command) => {
+      const ctx = ctxOf(command);
+      const flags = flagsOf(command);
+      const key = requireEvent(flags);
+      const scope = flags.scope ?? 'all';
+      if (scope !== 'all' && scope !== 'delta') {
+        throw new CliUsageError(`Escopo inválido: ${scope}`, 'Use all ou delta.');
+      }
+
+      const base = `/events/${encodeURIComponent(key)}/registrations/exports`;
+      if (flags.preview) {
+        emit(ctx.io, await ctx.client().api('POST', `${base}/preview`, { body: clean({ scope, race_id: flags.race }) }));
+        return;
+      }
+      emit(
+        ctx.io,
+        await ctx.client().api('POST', base, {
+          body: { ...clean({ scope, race_id: flags.race }), mark_processed: Boolean(flags.markProcessed) },
+        }),
+      );
     });
 
   // ----------------------------------------------------------------- result

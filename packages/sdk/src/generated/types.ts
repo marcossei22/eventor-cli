@@ -588,6 +588,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/{event}/registrations/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api/v1/events/{event}/registrations/exports — lista os lotes do evento */
+        get: operations["productionExports.index"];
+        put?: never;
+        /**
+         * POST /api/v1/events/{event}/registrations/exports — gera um lote
+         * @description Body: { scope?: all|delta (default all), race_id?: int, mark_processed?: bool (default false) }.
+         *     `delta` exige um lote anterior (422 se não houver). Retorna o lote + download_url
+         *     (o XLSX é baixado no GET .../download).
+         */
+        post: operations["productionExports.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events/{event}/registrations/exports/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * POST /api/v1/events/{event}/registrations/exports/preview — dry-run
+         * @description Classifica a base atual contra o último lote SEM gravar nada. Devolve as
+         *     contagens (novos/alterados/inalterados/cancelados), quantas linhas o arquivo
+         *     teria no escopo pedido (`will_export`) e se já existe um lote anterior
+         *     (`has_previous` — pré-requisito do escopo `delta`). Espelha o passo de preview
+         *     do wizard do painel.
+         *
+         *     Body: { scope?: all|delta (default all), race_id?: int }.
+         */
+        post: operations["productionExports.preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events/{event}/registrations/exports/{export}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api/v1/events/{event}/registrations/exports/{export}/download — XLSX do snapshot */
+        get: operations["productionExports.download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/products": {
         parameters: {
             query?: never;
@@ -931,6 +997,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/events/{event}/vacancy-pools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GET /api/v1/events/{event}/vacancy-pools */
+        get: operations["vacancyPools.index"];
+        put?: never;
+        /** POST /api/v1/events/{event}/vacancy-pools */
+        post: operations["vacancyPools.store"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/events/{event}/vacancy-pools/{pool}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** DELETE /api/v1/events/{event}/vacancy-pools/{pool} */
+        delete: operations["vacancyPools.destroy"];
+        options?: never;
+        head?: never;
+        /** PATCH /api/v1/events/{event}/vacancy-pools/{pool} */
+        patch: operations["vacancyPools.update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1106,7 +1208,6 @@ export interface components {
             registration_open: boolean;
             registration_opens_at: string;
             registration_closes_at: string;
-            max_registrations: number | null;
             hub_fee_percent: string | null;
             service_fee_cents: number;
             service_fee_mode: string;
@@ -1247,6 +1348,23 @@ export interface components {
          * @enum {string}
          */
         ProductType: "product" | "service";
+        /** ProductionExportResource */
+        ProductionExportResource: {
+            id: number;
+            scope: string;
+            status: string;
+            marked_processed: boolean;
+            counts: {
+                exported: number;
+                new: number;
+                changed: number;
+                canceled: number;
+                unchanged: number;
+            };
+            source: string;
+            download_url: string;
+            created_at: string;
+        };
         /** RaceResource */
         RaceResource: {
             id: number;
@@ -1262,7 +1380,6 @@ export interface components {
             duration_minutes: number | null;
             lap_count: number | null;
             lap_distance: number | null;
-            registration_limit: number | null;
             sem_classificacao: boolean;
             status: string;
             results_status: string;
@@ -1303,15 +1420,15 @@ export interface components {
             starts_at: string;
             ends_at: string;
             includes_kit: boolean;
-            max_quantity: number | null;
-            quantity_sold: number;
-            quantity_reserved: number;
             is_active: boolean;
             installments_enabled: boolean;
             max_installments: number;
             absorb_installment_interest: boolean;
             sort_order: number;
-            /** @description { race_id: price_cents } — única fonte de preço E cobertura do ingresso. */
+            /**
+             * @description { race_id: { price: cents, pool_id: <id|null> } } — preço + pacote de vagas
+             *     por prova (ADR #19). Vagas vivem em vacancy_pools, não mais no ingresso.
+             */
             race_prices: unknown[];
             created_at: string;
             updated_at: string;
@@ -1488,14 +1605,17 @@ export interface components {
             starts_at?: string | null;
             /** Format: date-time */
             ends_at?: string | null;
-            max_quantity?: number | null;
             includes_kit?: boolean;
             is_active?: boolean;
             installments_enabled?: boolean;
             max_installments: number;
             absorb_installment_interest?: boolean;
-            /** @description { race_id: price_cents } — única fonte de preço E cobertura. Ao menos 1. */
-            race_prices: number[];
+            /**
+             * @description race_prices: { race_id: { price: cents, pool_id: <id|null> } }. Aceita também
+             *     o legado { race_id: cents } (pool_id vira null). Normalização + validação de
+             *     chaves/pacote no controller (precisa do evento resolvido). Ao menos 1.
+             */
+            race_prices: string[];
         };
         /**
          * StoreCategoryRequest
@@ -1697,7 +1817,6 @@ export interface components {
             duration_minutes?: number | null;
             lap_count?: number | null;
             lap_distance?: number | null;
-            registration_limit?: number | null;
             status?: components["schemas"]["CommonStatus"];
             /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
             sem_classificacao?: boolean | null;
@@ -1821,6 +1940,16 @@ export interface components {
             phone?: string | null;
         };
         /**
+         * StoreVacancyPoolRequest
+         * @description POST /api/v1/events/{event}/vacancy-pools — cria um pacote de vagas (ADR #19).
+         *     Espelha EventSales::savePool. `pool_id` é referenciado depois em race_prices dos
+         *     ingressos (BatchesController::normalizeRacePrices valida a pertinência ao evento).
+         */
+        StoreVacancyPoolRequest: {
+            name: string;
+            max_quantity: number;
+        };
+        /**
          * UpdateAddonRequest
          * @description PATCH /api/v1/events/{event}/addons/{addon} — atualização parcial do order bump.
          */
@@ -1844,14 +1973,14 @@ export interface components {
             starts_at?: string | null;
             /** Format: date-time */
             ends_at?: string | null;
-            max_quantity?: number | null;
             includes_kit?: boolean;
             is_active?: boolean;
             installments_enabled?: boolean;
             max_installments?: number;
             absorb_installment_interest?: boolean;
             sort_order?: number;
-            race_prices?: number[];
+            /** @description race_prices: { race_id: { price: cents, pool_id } } (aceita legado { race_id: cents }). */
+            race_prices?: string[];
         };
         /**
          * UpdateCategoryRequest
@@ -2003,7 +2132,6 @@ export interface components {
             duration_minutes?: number | null;
             lap_count?: number | null;
             lap_distance?: number | null;
-            registration_limit?: number | null;
             status?: components["schemas"]["CommonStatus"];
             /** @description Prova sem cronometragem (ex.: KIDS) — portal exibe lista de inscritos. */
             sem_classificacao?: boolean;
@@ -2047,7 +2175,6 @@ export interface components {
             registration_opens_at?: string | null;
             /** Format: date-time */
             registration_closes_at?: string | null;
-            max_registrations?: number | null;
             hub_fee_percent?: number | null;
             service_fee_cents?: number | null;
             service_fee_mode?: components["schemas"]["ServiceFeeMode"];
@@ -2068,6 +2195,16 @@ export interface components {
             }[];
         };
         /**
+         * UpdateVacancyPoolRequest
+         * @description PATCH /api/v1/events/{event}/vacancy-pools/{pool} — edita um pacote de vagas.
+         *     `max_quantity` não pode cair abaixo do já ocupado (sold + reserved) — regra de
+         *     negócio validada no controller (precisa do pool resolvido).
+         */
+        UpdateVacancyPoolRequest: {
+            name?: string;
+            max_quantity?: number;
+        };
+        /**
          * UpsertModalityQuestionRequest
          * @description PUT /api/v1/modalities/{modality}/question — cria/atualiza a pergunta de opt-in
          *     do hub autenticado pra aquela modalidade (1 por (hub, modalidade)).
@@ -2082,6 +2219,19 @@ export interface components {
             help_text?: string | null;
             is_active?: boolean | null;
             sort_order?: number | null;
+        };
+        /** VacancyPoolResource */
+        VacancyPoolResource: {
+            id: number;
+            event_id: number;
+            name: string;
+            max_quantity: number;
+            quantity_sold: number;
+            quantity_reserved: number;
+            /** @description Disponível = teto − vendido − reservado (nunca negativo). */
+            available: number;
+            created_at: string;
+            updated_at: string;
         };
     };
     responses: {
@@ -5711,6 +5861,263 @@ export interface operations {
             };
         };
     };
+    "productionExports.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ProductionExportResource"][];
+                        meta: {
+                            page: number;
+                            per_page: number;
+                            total: number;
+                            last_page: number;
+                        };
+                        links: {
+                            next: string | null;
+                            prev: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "productionExports.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description `JsonResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ProductionExportResource"];
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "productionExports.preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            scope: string;
+                            has_previous: boolean;
+                            will_export: number;
+                            counts: {
+                                new: number;
+                                changed: number;
+                                unchanged: number;
+                                canceled: number;
+                            };
+                        };
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "productionExports.download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                export: string | number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    "Transfer-Encoding": "chunked";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
     "products.index": {
         parameters: {
             query?: {
@@ -7380,9 +7787,16 @@ export interface operations {
                     "application/json": {
                         data: {
                             race_id: string;
-                            registration_limit: string;
+                            unlimited: boolean;
                             registrations_count: string;
-                            vacancy: Record<string, never> | null;
+                            pools: {
+                                id: number;
+                                name: string;
+                                max_quantity: number;
+                                quantity_sold: number;
+                                quantity_reserved: number;
+                                available: number;
+                            }[];
                         };
                     };
                 };
@@ -7407,6 +7821,279 @@ export interface operations {
             };
             /** @description Recurso não encontrado neste hub. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "vacancyPools.index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["VacancyPoolResource"][];
+                        meta: {
+                            page: number;
+                            per_page: number;
+                            total: number;
+                            last_page: number;
+                        };
+                        links: {
+                            next: string | null;
+                            prev: string | null;
+                        };
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "vacancyPools.store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreVacancyPoolRequest"];
+            };
+        };
+        responses: {
+            /** @description `JsonResource` */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["VacancyPoolResource"];
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "vacancyPools.destroy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                pool: string | number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+        };
+    };
+    "vacancyPools.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event: string;
+                pool: string | number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["UpdateVacancyPoolRequest"];
+            };
+        };
+        responses: {
+            /** @description `JsonResource` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["VacancyPoolResource"];
+                    };
+                };
+            };
+            /** @description API key ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description A API key não tem o escopo `manage`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Recurso não encontrado neste hub. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Conflito (ex.: dependência que impede a operação). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"];
+                };
+            };
+            /** @description Falha de validação dos dados enviados. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
