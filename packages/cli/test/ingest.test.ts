@@ -135,6 +135,16 @@ describe('lap import', () => {
     expect(path(r.calls[0].url)).toBe('/events/260412/races/26041201/laps');
     expect(r.calls[0].body).toEqual({ laps: [{ athlete: { document: '1' }, lap_number: 1, partial_time: '00:05:03' }] });
   });
+
+  it('aceita laps casadas por bib (sem athlete)', async () => {
+    const file = jsonFile([{ bib: '20', lap_number: 3, partial_time: '00:09:40' }]);
+    const r = await runCli(['lap', 'import', '--event', '260412', '--race', '26041201', '--from', file], [
+      { status: 200, body: { import_id: 9, status: 'success', summary: { total_received: 1 }, results: [] } },
+    ]);
+
+    expect(r.code).toBe(0);
+    expect(r.calls[0].body).toEqual({ laps: [{ bib: '20', lap_number: 3, partial_time: '00:09:40' }] });
+  });
 });
 
 describe('import-status', () => {
