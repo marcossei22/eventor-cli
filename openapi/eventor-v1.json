@@ -11660,8 +11660,19 @@
                                     ],
                                     "maxLength": 100
                                 },
+                                "bib": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "description": "Chave natural forte: número (bib) dentro da prova. É por ele que a\nvolta é casada ao resultado. O bloco athlete é fallback (CPF/email)\npra quando a volta não traz o número.",
+                                    "maxLength": 10
+                                },
                                 "athlete": {
-                                    "type": "object",
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
                                     "properties": {
                                         "document": {
                                             "type": [
@@ -11727,7 +11738,6 @@
                                 }
                             },
                             "required": [
-                                "athlete",
                                 "lap_number"
                             ]
                         },

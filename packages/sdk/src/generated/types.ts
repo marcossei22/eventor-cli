@@ -1734,12 +1734,18 @@ export interface components {
         StoreLapsRequest: {
             laps: {
                 external_id?: string | null;
-                athlete: {
+                /**
+                 * @description Chave natural forte: número (bib) dentro da prova. É por ele que a
+                 *     volta é casada ao resultado. O bloco athlete é fallback (CPF/email)
+                 *     pra quando a volta não traz o número.
+                 */
+                bib?: string | null;
+                athlete?: {
                     document?: string | null;
                     /** Format: email */
                     email?: string | null;
                     name?: string | null;
-                };
+                } | null;
                 lap_number: number;
                 /** Format: date-time */
                 passed_at?: string | null;

@@ -164,7 +164,9 @@ Exemplos:
       'after',
       `
 O --from aceita o corpo completo {"laps":[...]} OU um array puro [...]. Cada lap
-exige athlete + lap_number. Acompanhe o resultado em result import-status <id>.
+exige lap_number e o "bib" (número da prova) — é por ele que a volta casa com o
+resultado. "athlete" (CPF/email) é fallback pra quando não há número.
+Acompanhe o resultado em result import-status <id>.
 
 Exemplo:
   $ eventor lap import --event 260412 --race 26041201 --from laps.json`,
