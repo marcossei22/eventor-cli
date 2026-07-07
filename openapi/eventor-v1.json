@@ -5302,6 +5302,429 @@
                 }
             }
         },
+        "/events/{event}/registrations/exports": {
+            "get": {
+                "operationId": "productionExports.index",
+                "summary": "GET /api/v1/events/{event}/registrations/exports \u2014 lista os lotes do evento",
+                "tags": [
+                    "ProductionExports"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ProductionExportResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "page",
+                                                "per_page",
+                                                "total",
+                                                "last_page"
+                                            ]
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "next",
+                                                "prev"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "links"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "productionExports.store",
+                "description": "Body: { scope?: all|delta (default all), race_id?: int, mark_processed?: bool (default false) }.\n`delta` exige um lote anterior (422 se n\u00e3o houver). Retorna o lote + download_url\n(o XLSX \u00e9 baixado no GET .../download).",
+                "summary": "POST /api/v1/events/{event}/registrations/exports \u2014 gera um lote",
+                "tags": [
+                    "ProductionExports"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProductionExportResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{event}/registrations/exports/preview": {
+            "post": {
+                "operationId": "productionExports.preview",
+                "description": "Classifica a base atual contra o \u00faltimo lote SEM gravar nada. Devolve as\ncontagens (novos/alterados/inalterados/cancelados), quantas linhas o arquivo\nteria no escopo pedido (`will_export`) e se j\u00e1 existe um lote anterior\n(`has_previous` \u2014 pr\u00e9-requisito do escopo `delta`). Espelha o passo de preview\ndo wizard do painel.\n\nBody: { scope?: all|delta (default all), race_id?: int }.",
+                "summary": "POST /api/v1/events/{event}/registrations/exports/preview \u2014 dry-run",
+                "tags": [
+                    "ProductionExports"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "scope": {
+                                                    "type": "string"
+                                                },
+                                                "has_previous": {
+                                                    "type": "boolean"
+                                                },
+                                                "will_export": {
+                                                    "type": "integer"
+                                                },
+                                                "counts": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "new": {
+                                                            "type": "integer"
+                                                        },
+                                                        "changed": {
+                                                            "type": "integer"
+                                                        },
+                                                        "unchanged": {
+                                                            "type": "integer"
+                                                        },
+                                                        "canceled": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "new",
+                                                        "changed",
+                                                        "unchanged",
+                                                        "canceled"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "scope",
+                                                "has_previous",
+                                                "will_export",
+                                                "counts"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{event}/registrations/exports/{export}/download": {
+            "get": {
+                "operationId": "productionExports.download",
+                "summary": "GET /api/v1/events/{event}/registrations/exports/{export}/download \u2014 XLSX do snapshot",
+                "tags": [
+                    "ProductionExports"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "export",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "headers": {
+                            "Transfer-Encoding": {
+                                "required": true,
+                                "schema": {
+                                    "type": "string",
+                                    "enum": [
+                                        "chunked"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/products": {
             "get": {
                 "operationId": "products.index",
@@ -8016,24 +8439,52 @@
                                                 "race_id": {
                                                     "type": "string"
                                                 },
-                                                "registration_limit": {
-                                                    "type": "string"
+                                                "unlimited": {
+                                                    "type": "boolean"
                                                 },
                                                 "registrations_count": {
                                                     "type": "string"
                                                 },
-                                                "vacancy": {
-                                                    "type": [
-                                                        "object",
-                                                        "null"
-                                                    ]
+                                                "pools": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "max_quantity": {
+                                                                "type": "integer"
+                                                            },
+                                                            "quantity_sold": {
+                                                                "type": "integer"
+                                                            },
+                                                            "quantity_reserved": {
+                                                                "type": "integer"
+                                                            },
+                                                            "available": {
+                                                                "type": "integer"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "id",
+                                                            "name",
+                                                            "max_quantity",
+                                                            "quantity_sold",
+                                                            "quantity_reserved",
+                                                            "available"
+                                                        ]
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "race_id",
-                                                "registration_limit",
+                                                "unlimited",
                                                 "registrations_count",
-                                                "vacancy"
+                                                "pools"
                                             ]
                                         }
                                     },
@@ -8066,6 +8517,421 @@
                     },
                     "404": {
                         "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{event}/vacancy-pools": {
+            "get": {
+                "operationId": "vacancyPools.index",
+                "summary": "GET /api/v1/events/{event}/vacancy-pools",
+                "tags": [
+                    "VacancyPools"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/VacancyPoolResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "page",
+                                                "per_page",
+                                                "total",
+                                                "last_page"
+                                            ]
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "next",
+                                                "prev"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "links"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "vacancyPools.store",
+                "summary": "POST /api/v1/events/{event}/vacancy-pools",
+                "tags": [
+                    "VacancyPools"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreVacancyPoolRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/VacancyPoolResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/events/{event}/vacancy-pools/{pool}": {
+            "patch": {
+                "operationId": "vacancyPools.update",
+                "summary": "PATCH /api/v1/events/{event}/vacancy-pools/{pool}",
+                "tags": [
+                    "VacancyPools"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "pool",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateVacancyPoolRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`JsonResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/VacancyPoolResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "vacancyPools.destroy",
+                "summary": "DELETE /api/v1/events/{event}/vacancy-pools/{pool}",
+                "tags": [
+                    "VacancyPools"
+                ],
+                "parameters": [
+                    {
+                        "name": "event",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "pool",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "401": {
+                        "description": "API key ausente ou inv\u00e1lida.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "A API key n\u00e3o tem o escopo `manage`.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Recurso n\u00e3o encontrado neste hub.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Falha de valida\u00e7\u00e3o dos dados enviados.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApiError"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflito (ex.: depend\u00eancia que impede a opera\u00e7\u00e3o).",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -8783,12 +9649,6 @@
                     "registration_closes_at": {
                         "type": "string"
                     },
-                    "max_registrations": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
                     "hub_fee_percent": {
                         "type": [
                             "string",
@@ -8919,7 +9779,6 @@
                     "registration_open",
                     "registration_opens_at",
                     "registration_closes_at",
-                    "max_registrations",
                     "hub_fee_percent",
                     "service_fee_cents",
                     "service_fee_mode",
@@ -9396,6 +10255,70 @@
                 ],
                 "title": "ProductType"
             },
+            "ProductionExportResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "scope": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "marked_processed": {
+                        "type": "boolean"
+                    },
+                    "counts": {
+                        "type": "object",
+                        "properties": {
+                            "exported": {
+                                "type": "integer"
+                            },
+                            "new": {
+                                "type": "integer"
+                            },
+                            "changed": {
+                                "type": "integer"
+                            },
+                            "canceled": {
+                                "type": "integer"
+                            },
+                            "unchanged": {
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "exported",
+                            "new",
+                            "changed",
+                            "canceled",
+                            "unchanged"
+                        ]
+                    },
+                    "source": {
+                        "type": "string"
+                    },
+                    "download_url": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "scope",
+                    "status",
+                    "marked_processed",
+                    "counts",
+                    "source",
+                    "download_url",
+                    "created_at"
+                ],
+                "title": "ProductionExportResource"
+            },
             "RaceResource": {
                 "type": "object",
                 "properties": {
@@ -9456,12 +10379,6 @@
                     "lap_distance": {
                         "type": [
                             "number",
-                            "null"
-                        ]
-                    },
-                    "registration_limit": {
-                        "type": [
-                            "integer",
                             "null"
                         ]
                     },
@@ -9532,7 +10449,6 @@
                     "duration_minutes",
                     "lap_count",
                     "lap_distance",
-                    "registration_limit",
                     "sem_classificacao",
                     "status",
                     "results_status",
@@ -9624,18 +10540,6 @@
                     "includes_kit": {
                         "type": "boolean"
                     },
-                    "max_quantity": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
-                    "quantity_sold": {
-                        "type": "integer"
-                    },
-                    "quantity_reserved": {
-                        "type": "integer"
-                    },
                     "is_active": {
                         "type": "boolean"
                     },
@@ -9653,7 +10557,7 @@
                     },
                     "race_prices": {
                         "type": "array",
-                        "description": "{ race_id: price_cents } \u2014 \u00fanica fonte de pre\u00e7o E cobertura do ingresso.",
+                        "description": "{ race_id: { price: cents, pool_id: <id|null> } } \u2014 pre\u00e7o + pacote de vagas\npor prova (ADR #19). Vagas vivem em vacancy_pools, n\u00e3o mais no ingresso.",
                         "items": {}
                     },
                     "created_at": {
@@ -9670,9 +10574,6 @@
                     "starts_at",
                     "ends_at",
                     "includes_kit",
-                    "max_quantity",
-                    "quantity_sold",
-                    "quantity_reserved",
                     "is_active",
                     "installments_enabled",
                     "max_installments",
@@ -10326,14 +11227,6 @@
                         ],
                         "format": "date-time"
                     },
-                    "max_quantity": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ],
-                        "minimum": 1,
-                        "maximum": 1000000
-                    },
                     "includes_kit": {
                         "type": "boolean"
                     },
@@ -10353,10 +11246,9 @@
                     },
                     "race_prices": {
                         "type": "array",
-                        "description": "{ race_id: price_cents } \u2014 \u00fanica fonte de pre\u00e7o E cobertura. Ao menos 1.",
+                        "description": "race_prices: { race_id: { price: cents, pool_id: <id|null> } }. Aceita tamb\u00e9m\no legado { race_id: cents } (pool_id vira null). Normaliza\u00e7\u00e3o + valida\u00e7\u00e3o de\nchaves/pacote no controller (precisa do evento resolvido). Ao menos 1.",
                         "items": {
-                            "type": "integer",
-                            "minimum": 0
+                            "type": "string"
                         },
                         "minItems": 1
                     }
@@ -11100,12 +11992,6 @@
                         ],
                         "minimum": 0
                     },
-                    "registration_limit": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
                     "status": {
                         "$ref": "#/components/schemas/CommonStatus"
                     },
@@ -11551,6 +12437,26 @@
                 ],
                 "title": "StoreSalespersonRequest"
             },
+            "StoreVacancyPoolRequest": {
+                "type": "object",
+                "description": "POST /api/v1/events/{event}/vacancy-pools \u2014 cria um pacote de vagas (ADR #19).\nEspelha EventSales::savePool. `pool_id` \u00e9 referenciado depois em race_prices dos\ningressos (BatchesController::normalizeRacePrices valida a pertin\u00eancia ao evento).",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "max_quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000000
+                    }
+                },
+                "required": [
+                    "name",
+                    "max_quantity"
+                ],
+                "title": "StoreVacancyPoolRequest"
+            },
             "UpdateAddonRequest": {
                 "type": "object",
                 "description": "PATCH /api/v1/events/{event}/addons/{addon} \u2014 atualiza\u00e7\u00e3o parcial do order bump.",
@@ -11626,14 +12532,6 @@
                         ],
                         "format": "date-time"
                     },
-                    "max_quantity": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ],
-                        "minimum": 1,
-                        "maximum": 1000000
-                    },
                     "includes_kit": {
                         "type": "boolean"
                     },
@@ -11657,9 +12555,9 @@
                     },
                     "race_prices": {
                         "type": "array",
+                        "description": "race_prices: { race_id: { price: cents, pool_id } } (aceita legado { race_id: cents }).",
                         "items": {
-                            "type": "integer",
-                            "minimum": 0
+                            "type": "string"
                         },
                         "minItems": 1
                     }
@@ -12205,12 +13103,6 @@
                         ],
                         "minimum": 0
                     },
-                    "registration_limit": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
-                    },
                     "status": {
                         "$ref": "#/components/schemas/CommonStatus"
                     },
@@ -12329,14 +13221,6 @@
                         ],
                         "format": "date-time"
                     },
-                    "max_registrations": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ],
-                        "minimum": 1,
-                        "maximum": 1000000
-                    },
                     "hub_fee_percent": {
                         "type": [
                             "number",
@@ -12407,6 +13291,22 @@
                 ],
                 "title": "UpdateRetentionRequest"
             },
+            "UpdateVacancyPoolRequest": {
+                "type": "object",
+                "description": "PATCH /api/v1/events/{event}/vacancy-pools/{pool} \u2014 edita um pacote de vagas.\n`max_quantity` n\u00e3o pode cair abaixo do j\u00e1 ocupado (sold + reserved) \u2014 regra de\nneg\u00f3cio validada no controller (precisa do pool resolvido).",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "max_quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000000
+                    }
+                },
+                "title": "UpdateVacancyPoolRequest"
+            },
             "UpsertModalityQuestionRequest": {
                 "type": "object",
                 "description": "PUT /api/v1/modalities/{modality}/question \u2014 cria/atualiza a pergunta de opt-in\ndo hub autenticado pra aquela modalidade (1 por (hub, modalidade)).\n\n`options` \u00e9 obrigat\u00f3ria quando o tipo exige lista (select/multiselect),\nespelhando RegistrationFieldType::requiresOptions().",
@@ -12452,6 +13352,51 @@
                     "type"
                 ],
                 "title": "UpsertModalityQuestionRequest"
+            },
+            "VacancyPoolResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "event_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "max_quantity": {
+                        "type": "integer"
+                    },
+                    "quantity_sold": {
+                        "type": "integer"
+                    },
+                    "quantity_reserved": {
+                        "type": "integer"
+                    },
+                    "available": {
+                        "type": "integer",
+                        "description": "Dispon\u00edvel = teto \u2212 vendido \u2212 reservado (nunca negativo)."
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "event_id",
+                    "name",
+                    "max_quantity",
+                    "quantity_sold",
+                    "quantity_reserved",
+                    "available",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "VacancyPoolResource"
             }
         },
         "responses": {

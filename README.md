@@ -70,7 +70,8 @@ eventor api GET /events --all                    # escape hatch: cobre 100% do s
 
 - **Exit codes semânticos:** `0` ok · `1` genérico/5xx · `2` uso · `3` not_found · `4` unauthorized · `5` conflict.
 - **Erro acionável:** todo erro vira `{"error":{"code","message","hint"}}` no stderr; o agente lê `code` (decide) e `hint` (próximo comando).
-- **`event setup`:** workflow consolidado e idempotente; `race_prices` aceita o **nome da prova** (resolvido pra `race_id`); `--dry-run` só faz GETs.
+- **`event setup`:** workflow consolidado e idempotente; `race_prices` aceita o **nome da prova** (resolvido pra `race_id`) e, pra limitar vagas, `{ "price", "pool" }` com o **nome do pacote** declarado em `vacancy_pools` (resolvido pra `pool_id`, ADR #19); `--dry-run` só faz GETs.
+- **`registration export`:** gera o lote de inscritos pra produção (resposta traz `download_url`); `--preview` faz o dry-run (contagens de novos/alterados/cancelados) sem gravar; `--scope delta` exige um lote anterior.
 - **Destrutivo (`api DELETE`)** exige `--yes` (agente em CI nunca fica pendurado).
 - **`eventor skill install`** instala o [`SKILL.md`](packages/cli/SKILL.md) em `~/.claude/skills/eventor/` — ensina o agente quando/como usar o CLI. `--help` em qualquer comando traz exemplos copiáveis + a tabela de exit codes.
 

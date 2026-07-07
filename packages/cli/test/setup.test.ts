@@ -10,7 +10,7 @@ const SPEC = {
   event: { name: 'Maratona', code: 'MAR2026', date: '2026-09-13' },
   organizer: { name: 'Run Brasil', document: '12345678000190' },
   races: [{ name: '10K', distance: 10, categories: [{ name: 'Geral M', sex: 'M', award_count: 3 }] }],
-  registration_settings: { is_free: false, max_registrations: 3000 },
+  registration_settings: { is_free: false },
   batches: [{ name: '1º Lote', max_installments: 6, race_prices: { '10K': 12900 } }],
   registration_fields: [{ label: 'Camiseta', type: 'select', options: [{ value: 'P', label: 'P' }] }],
   publish: true,
@@ -157,6 +157,75 @@ describe('event setup — modalidades por nome', () => {
   });
 });
 
+const POOL_SPEC = {
+  event: { name: 'Corrida', code: 'COR2026', date: '2026-11-01' },
+  races: [{ name: '10K', distance: 10 }],
+  vacancy_pools: [{ name: 'Geral', max_quantity: 500 }],
+  batches: [{ name: 'Lote 1', race_prices: { '10K': { price: 9900, pool: 'Geral' } } }],
+};
+
+function poolSpecFile(): string {
+  const file = join(mkdtempSync(join(tmpdir(), 'eventor-poolspec-')), 'spec.json');
+  writeFileSync(file, JSON.stringify(POOL_SPEC));
+  return file;
+}
+
+/** Fake: pacote "Geral" é novo (POST /vacancy-pools → id 55); prova 10K → id 201. */
+function poolFakeServer(): Handler {
+  let eventCreated = false;
+  return (method, url) => {
+    const path = new URL(url).pathname.replace('/api/v1', '');
+    if (method === 'GET') {
+      if (path === '/events/COR2026') {
+        return eventCreated
+          ? { status: 200, body: { data: { code: 'COR2026', status: 'draft' } } }
+          : { status: 404, body: { error: 'not_found', message: 'x' } };
+      }
+      if (path.startsWith('/events/COR2026/') && !eventCreated) {
+        return { status: 404, body: { error: 'not_found', message: 'x' } };
+      }
+      return { status: 200, body: { data: [], meta: { last_page: 1 } } };
+    }
+    if (method === 'POST' && path === '/events') {
+      eventCreated = true;
+      return { status: 201, body: { data: { id: 1, code: 'COR2026' } } };
+    }
+    if (method === 'POST' && path.endsWith('/vacancy-pools')) return { status: 201, body: { data: { id: 55, name: 'Geral' } } };
+    if (method === 'POST' && path.endsWith('/races')) return { status: 201, body: { data: { id: 201, name: '10K' } } };
+    if (method === 'POST') return { status: 201, body: { data: { id: 99 } } };
+    if (method === 'PUT' || method === 'PATCH') return { status: 200, body: { data: {} } };
+    return { status: 200, body: { data: {} } };
+  };
+}
+
+describe('event setup — pacotes de vagas (ADR #19)', () => {
+  it('cria o pacote e resolve nome→pool_id em race_prices', async () => {
+    const r = await runCli(['event', 'setup', '--from', poolSpecFile()], poolFakeServer());
+    expect(r.code).toBe(0);
+
+    // Pacote criado uma vez, antes do lote.
+    const poolPosts = r.calls.filter((c) => c.method === 'POST' && c.url.endsWith('/vacancy-pools'));
+    expect(poolPosts).toHaveLength(1);
+    expect((poolPosts[0].body as { name: string; max_quantity: number })).toEqual({ name: 'Geral', max_quantity: 500 });
+
+    // race_prices: "10K" → 201, pool "Geral" → 55.
+    const batchPost = r.calls.find((c) => c.method === 'POST' && c.url.endsWith('/batches'));
+    expect((batchPost!.body as { race_prices: Record<string, unknown> }).race_prices).toEqual({
+      '201': { price: 9900, pool_id: 55 },
+    });
+  });
+
+  it('erra cedo quando race_prices referencia um pacote não declarado', async () => {
+    const bad = { ...POOL_SPEC, batches: [{ name: 'Lote 1', race_prices: { '10K': { price: 9900, pool: 'Inexistente' } } }] };
+    const file = join(mkdtempSync(join(tmpdir(), 'eventor-badpool-')), 'spec.json');
+    writeFileSync(file, JSON.stringify(bad));
+
+    const r = await runCli(['event', 'setup', '--from', file], poolFakeServer());
+    expect(r.code).not.toBe(0);
+    expect(r.stderr).toContain('Inexistente');
+  });
+});
+
 describe('event setup (apply)', () => {
   it('cria organizer→event→race→categoria→lote→campo→publish e mapeia race_prices por nome', async () => {
     const r = await runCli(['event', 'setup', '--from', specFile()], fakeServer());
@@ -173,9 +242,11 @@ describe('event setup (apply)', () => {
     expect(posts).toContain('/events/MAR2026/registration-fields');
     expect(posts).toContain('/events/MAR2026/publish');
 
-    // race_prices: "10K" → race_id 201.
+    // race_prices: atalho legado "10K": 12900 → { race_id 201: { price, pool_id null } } (ADR #19).
     const batchPost = r.calls.find((c) => c.method === 'POST' && c.url.endsWith('/batches'));
-    expect((batchPost!.body as { race_prices: Record<string, number> }).race_prices).toEqual({ '201': 12900 });
+    expect((batchPost!.body as { race_prices: Record<string, unknown> }).race_prices).toEqual({
+      '201': { price: 12900, pool_id: null },
+    });
 
     // registration-settings via PUT.
     expect(r.calls.some((c) => c.method === 'PUT' && c.url.endsWith('/registration-settings'))).toBe(true);

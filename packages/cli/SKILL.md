@@ -48,8 +48,10 @@ eventor event setup --from spec.json             # executa idempotente; re-rodar
                                { "name": "Fem 30-39", "sex": "F", "modalities": ["Geral"] } ] },
              { "name": "KIDS", "distance": 0.4, "sem_classificacao": true,
                "categories": [ { "name": "5-7 anos" } ] } ],
-  "registration_settings": { "is_free": false, "max_registrations": 3000 },
-  "batches": [ { "name": "1º Lote", "max_installments": 6, "race_prices": { "10K": 12900 } } ],
+  "registration_settings": { "is_free": false },
+  "vacancy_pools": [ { "name": "Geral", "max_quantity": 500 } ],
+  "batches": [ { "name": "1º Lote", "max_installments": 6,
+                 "race_prices": { "10K": { "price": 12900, "pool": "Geral" } } } ],
   "registration_fields": [ { "label": "Tamanho da camiseta", "type": "select",
                              "options": [ { "value": "P", "label": "P" }, { "value": "M", "label": "M" } ] } ],
   "modality_questions": [ { "modality": "Morador", "label": "Sou morador (anexe o comprovante)", "type": "file" } ],
@@ -59,6 +61,10 @@ eventor event setup --from spec.json             # executa idempotente; re-rodar
 
 > `race_prices` usa o **nome da prova** (ex.: `"10K"`); o CLI resolve pra `race_id`.
 > Preços em **centavos**. `--dry-run` mostra o mapeamento.
+> Pra **limitar vagas** (ADR #19), declare pacotes em `vacancy_pools` e referencie por
+> nome: `"10K": { "price": 12900, "pool": "Geral" }`. Sem `pool` (ou usando o atalho
+> `"10K": 12900`), a prova é **ilimitada**. Vários pares ingresso×prova podem dividir o
+> mesmo pacote. Reduzir `max_quantity` abaixo do já vendido é recusado (422).
 > `sem_classificacao: true` numa prova (ex.: KIDS) — prova sem cronometragem: no
 > portal de resultados aparece como **lista de inscritos**, sem tempo/colocação.
 
@@ -100,6 +106,7 @@ eventor event show --event MAR2026 --json     # read-back pra conferir
 | criar modalidade / pergunta de opt-in | `eventor modality create --name <nome>` · `eventor modality question --modality <id> --label <txt> --type checkbox\|file` |
 | organizadores / vendedores | `eventor organizer list\|create` · `eventor salesperson list\|create` |
 | inscrições: listar / apagar uma / limpar em lote | `eventor registration list\|delete\|clear --event <code>` |
+| exportar inscritos pra produção (`--preview` = dry-run) | `eventor registration export --event <code> [--scope all\|delta] [--preview]` |
 | resultados: listar / apagar / limpar prova ou evento | `eventor result list\|delete\|clear --event <code>` |
 | **importar** resultados em lote (cronometragem) | `eventor result import --event <code> --race <id\|code> --from results.json` |
 | **importar** inscrições em lote | `eventor registration import --event <code> --race <id\|code> --from inscritos.json` |
